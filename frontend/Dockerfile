@@ -6,6 +6,18 @@ COPY . .
 RUN npm run build
 
 FROM nginx:stable-alpine
+# Copy the built React files
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Create a custom Nginx config to handle React routing
+RUN echo 'server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html index.htm; \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
