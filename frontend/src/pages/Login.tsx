@@ -7,7 +7,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     try {
       const response = await api.post('/auth/signin', formData);
