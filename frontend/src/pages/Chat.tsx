@@ -12,7 +12,8 @@ const Chat = () => {
         localStream,
         remoteStream,
         isCalling,
-        setIsCalling
+        setIsCalling,
+        toggleScreenShare
     } = useChat();
 
     const handleSend = (e: React.BaseSyntheticEvent) => {
@@ -42,6 +43,7 @@ const Chat = () => {
                     localStream={localStream}
                     remoteStream={remoteStream}
                     onHangUp={handleHangUp}
+                    onToggleScreenShare={toggleScreenShare}
                 />
             )}
 

@@ -21,6 +21,7 @@ export const useChat = () => {
     const currentUserRef = useRef<string | null>(getInitialUser());
     const currentUser = currentUserRef.current;
     const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
+    const screenStreamRef = useRef<MediaStream | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -62,6 +63,11 @@ export const useChat = () => {
                         console.log("📥 OFFER detected. Initializing Answerer...");
                         setIsCalling(true);
                         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+                        stream.getAudioTracks().forEach(track => track.enabled = false);
+                        stream.getVideoTracks().forEach(track => track.enabled = false);
+
+
                         setLocalStream(stream);
 
                         const peer = new RTCPeerConnection({
@@ -170,6 +176,11 @@ export const useChat = () => {
     const startCall = async (receiver: string) => {
         setIsCalling(true);
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+        // START MUTED: Disable tracks immediately
+        stream.getAudioTracks().forEach(track => track.enabled = false);
+        stream.getVideoTracks().forEach(track => track.enabled = false);
+
         setLocalStream(stream);
 
         pc.current = new RTCPeerConnection({
@@ -208,6 +219,50 @@ export const useChat = () => {
         sendSignalingMessage("OFFER", offer, receiver);
     };
 
+    const toggleScreenShare = async () => {
+        if (!pc.current || !localStream) return;
+
+        try {
+            if (!screenStreamRef.current) {
+                // 1. Capture Screen
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStreamRef.current = screenStream;
+
+                // 2. Replace Track (Senior Flex: replaceTrack is seamless)
+                const videoTrack = screenStream.getVideoTracks()[0];
+                const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
+
+                if (sender) {
+                    sender.replaceTrack(videoTrack);
+                }
+
+                // 3. Handle user stopping share via browser UI
+                videoTrack.onended = () => stopScreenShare();
+                setLocalStream(screenStream); // Update UI to show screen in small box
+            } else {
+                stopScreenShare();
+            }
+
+        } catch (err) {
+            console.error("Screen share failed", err);
+        }
+    };
+
+    const stopScreenShare = async () => {
+        if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(t => t.stop());
+            screenStreamRef.current = null;
+
+            // Switch back to camera
+            const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const videoTrack = cameraStream.getVideoTracks()[0];
+            const sender = pc.current?.getSenders().find(s => s.track?.kind === 'video');
+
+            if (sender) sender.replaceTrack(videoTrack);
+            setLocalStream(cameraStream);
+        }
+    };
+
     return {
         messages,
         sendMessage,
@@ -216,6 +271,8 @@ export const useChat = () => {
         localStream,    // Your camera feed
         remoteStream,   // Their camera feed
         isCalling,      // Boolean to show/hide the UI
-        setIsCalling    // To close the UI on hangup
+        setIsCalling,    // To close the UI on hangup
+        toggleScreenShare,
+        stopScreenShare
     };
 };

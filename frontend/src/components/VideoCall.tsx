@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video, VideoOff, Monitor } from 'lucide-react';
 
 interface VideoCallProps {
     localStream: MediaStream | null;
     remoteStream: MediaStream | null;
     onHangUp: () => void;
+    onToggleScreenShare: () => void;
 }
 
-const VideoCall: React.FC<VideoCallProps> = ({ localStream, remoteStream, onHangUp }) => {
-    const [isMuted, setIsMuted] = useState(false);
-    const [isVideoOff, setIsVideoOff] = useState(false);
+const VideoCall: React.FC<VideoCallProps> = ({ localStream, remoteStream, onHangUp, onToggleScreenShare }) => {
+    const [isMuted, setIsMuted] = useState(true);
+    const [isVideoOff, setIsVideoOff] = useState(true);
     const localVideoRef = React.useRef<HTMLVideoElement>(null);
     const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
 
@@ -24,15 +25,15 @@ const VideoCall: React.FC<VideoCallProps> = ({ localStream, remoteStream, onHang
     React.useEffect(() => {
         const playRemote = async () => {
             if (remoteVideoRef.current && remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream;
-            // try {
-            //     // Force play to overcome Safari/Chrome autoplay restrictions
-            //     await remoteVideoRef.current.play();
-            //     console.log("▶️ Remote stream playing");
-            // } catch (err) {
-            //     console.warn("⚠️ Autoplay blocked, waiting for interaction:", err);
-            // }
-        }
+                remoteVideoRef.current.srcObject = remoteStream;
+                // try {
+                //     // Force play to overcome Safari/Chrome autoplay restrictions
+                //     await remoteVideoRef.current.play();
+                //     console.log("▶️ Remote stream playing");
+                // } catch (err) {
+                //     console.warn("⚠️ Autoplay blocked, waiting for interaction:", err);
+                // }
+            }
         };
         playRemote();
     }, [remoteStream]);
@@ -77,7 +78,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ localStream, remoteStream, onHang
                 <button onClick={onHangUp} className="p-4 rounded-full bg-red-500 hover:bg-red-600 transition text-white">
                     <PhoneOff size={24} />
                 </button>
-
+                <button onClick={onToggleScreenShare} className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition">
+                    <Monitor size={24} />
+                </button>
                 <button onClick={toggleVideo} className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition">
                     {isVideoOff ? <VideoOff size={24} className="text-red-500" /> : <Video size={24} />}
                 </button>
