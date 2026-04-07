@@ -22,14 +22,16 @@ public class SignalingController {
     // Peer B sends their "Answer" back
     @MessageMapping("/call.answer")
     @SendTo("/topic/public")
-    public WebRTCMessage answer(@Payload WebRTCMessage message) {
+    public WebRTCMessage answer(@Payload WebRTCMessage message, Principal principal) {
+        message.setSender(principal.getName());
         return message;
     }
 
     // Peers exchange ICE Candidates (Network info)
     @MessageMapping("/call.candidate")
     @SendTo("/topic/public")
-    public WebRTCMessage candidate(@Payload WebRTCMessage message) {
+    public WebRTCMessage candidate(@Payload WebRTCMessage message, Principal principal) {
+        message.setSender(principal.getName());
         return message;
     }
 }

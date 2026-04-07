@@ -15,3 +15,8 @@ spring:
 app:
   jwtSecret: yourSecureRandomSecretKeyThatIsAtLeast32CharactersLong!!
   jwtExpirationMs: 86400000
+
+logging:
+  level:
+    org.springframework.web.socket: DEBUG
+    org.springframework.messaging: DEBUG

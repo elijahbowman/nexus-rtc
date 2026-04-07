@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import { useChat } from '../hooks/useChat';
-import { Hash, Mic, Video, Settings, PlusCircle } from 'lucide-react';
+import { Hash, Mic, Video, Settings, PlusCircle, LogOut } from 'lucide-react';
+import VideoCall from '../components/VideoCall';
 
 const Chat = () => {
     const [input, setInput] = useState('');
-    const { messages, sendMessage, sendSignalingMessage } = useChat();
+    const {
+        messages,
+        sendMessage,
+        startCall,
+        localStream,
+        remoteStream,
+        isCalling,
+        setIsCalling
+    } = useChat();
 
     const handleSend = (e: React.BaseSyntheticEvent) => {
         e.preventDefault();
@@ -14,19 +23,37 @@ const Chat = () => {
         }
     };
 
-    // Temporary
-    // TODO: Remove when done testing
-    const testCall = () => {
-        // Simulate sending a WebRTC Offer
-        sendSignalingMessage("OFFER", { sdp: "v=0...fake-sdp-data" }, "OtherUser");
+    const handleHangUp = () => {
+        // Stop the camera tracks
+        localStream?.getTracks().forEach(track => track.stop());
+        setIsCalling(false);
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
     };
 
     return (
         <div className="flex h-screen bg-discord-dark overflow-hidden">
+            {/* Add the Conditional Video Overlay */}
+            {isCalling && (
+                <VideoCall
+                    localStream={localStream}
+                    remoteStream={remoteStream}
+                    onHangUp={handleHangUp}
+                />
+            )}
+
             {/* Sidebar - Channels */}
             <div className="w-64 bg-discord-black flex flex-col">
                 <div className="p-4 shadow-md font-bold border-b border-black">
                     Discord Clone
+                    <Video
+                        className="cursor-pointer text-gray-400 hover:text-white"
+                        size={20}
+                        onClick={() => startCall("target-user")}
+                    />
                 </div>
                 <div className="flex-1 p-2 space-y-1">
                     <div className="flex items-center p-2 rounded bg-gray-700 text-white cursor-pointer">
@@ -41,18 +68,11 @@ const Chat = () => {
                     </div>
                     <div className="flex space-x-2 text-gray-400">
                         <Mic size={16} className="cursor-pointer hover:text-white" />
-                        <Video size={16} className="cursor-pointer hover:text-white" />
+                        <Video size={16} className="cursor-pointer hover:text-white" onClick={() => startCall("target")} />
                         <Settings size={16} className="cursor-pointer hover:text-white" />
+                        <LogOut size={16} className="cursor-pointer hover:text-red-500" onClick={handleLogout} />
                     </div>
                 </div>
-                {/* Temporary */}
-                {/* TODO: Remove when done testing */}
-                <button
-                    onClick={testCall}
-                    className="p-1 hover:bg-gray-600 rounded text-xs text-gray-400"
-                >
-                    Test Signaling
-                </button>
             </div>
 
             {/* Main Chat Area */}
@@ -81,6 +101,7 @@ const Chat = () => {
                     <div className="bg-[#383a40] rounded-lg flex items-center p-2">
                         <PlusCircle className="text-gray-400 mx-2 cursor-pointer hover:text-white" />
                         <input
+                            name="message"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Message #general"
