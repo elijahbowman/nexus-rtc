@@ -26,13 +26,13 @@ const VideoCall: React.FC<VideoCallProps> = ({ localStream, remoteStream, onHang
         const playRemote = async () => {
             if (remoteVideoRef.current && remoteStream) {
                 remoteVideoRef.current.srcObject = remoteStream;
-                // try {
-                //     // Force play to overcome Safari/Chrome autoplay restrictions
-                //     await remoteVideoRef.current.play();
-                //     console.log("▶️ Remote stream playing");
-                // } catch (err) {
-                //     console.warn("⚠️ Autoplay blocked, waiting for interaction:", err);
-                // }
+                try {
+                    // Force play to overcome Safari/Chrome autoplay restrictions
+                    await remoteVideoRef.current.play();
+                    console.log("▶️ Remote stream playing");
+                } catch (err) {
+                    console.warn("⚠️ Autoplay blocked, waiting for interaction:", err);
+                }
             }
         };
         playRemote();
