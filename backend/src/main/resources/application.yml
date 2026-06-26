@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/discord_db
+    url: jdbc:postgresql://localhost:5432/realtime_communication_db
     username: dev
     password: password
   jpa:
