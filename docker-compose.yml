@@ -9,6 +9,8 @@ services:
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
+    volumes:
+      - pg_persistence_layer:/var/lib/postgresql/data
     restart: unless-stopped
 
   backend:
@@ -47,3 +49,7 @@ services:
       - ./coturn/turnserver.conf:/etc/turnserver.conf:ro
     command: turnserver -c /etc/turnserver.conf --log-file=stdout
     restart: unless-stopped
+
+volumes:
+  pg_persistence_layer:
+    driver: local
