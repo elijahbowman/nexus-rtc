@@ -22,6 +22,11 @@ export const useChat = () => {
     const currentUser = currentUserRef.current;
     const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
     const screenStreamRef = useRef<MediaStream | null>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isVideoOff, setIsVideoOff] = useState(true);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    
+
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -31,10 +36,18 @@ export const useChat = () => {
             connectHeaders: {
                 Authorization: `Bearer ${token}`
             },
-            debug: (str) => console.log(str),
+            debug: (str) => {
+                // Only log protocol noise if running in local developer mode
+                if (import.meta.env.NODE_ENV === 'development') {
+                    console.log(`[STOMP-PROTOCOL] ${str}`);
+                }
+            },
             reconnectDelay: 5000,
             onConnect: () => {
-                console.log('Connected to WebSocket');;
+                console.log('[APP-TELEMETRY] 🔑 JWT Token verified via LocalStorage. Injecting Authorization Headers...');
+                console.log('[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ws://localhost:8080/ws');
+                console.log('[APP-TELEMETRY] ✅ STOMP connection successfully established with Principal Identity.');
+                console.log('[APP-TELEMETRY] 📡 Subscribed to global broadcast signaling hub: /topic/public');
                 client.subscribe('/topic/public', async (message) => {
                     const payload = JSON.parse(message.body);
                     const freshToken = localStorage.getItem('token');  // Get a FRESH identity for the comparison
@@ -42,7 +55,7 @@ export const useChat = () => {
 
                     // Log EVERY signaling packet before any 'if' statements
                     if (payload.type) {
-                        console.log(`🔍 RAW SIGNAL: ${payload.type} from ${payload.sender} (Me: ${currentUser})`);
+                        console.log(`[APP-TELEMETRY] 🔍 RAW SIGNAL: ${payload.type} from ${payload.sender} (Me: ${currentUser})`);
                     }
 
                     // CHAT
@@ -53,21 +66,28 @@ export const useChat = () => {
 
                     // Use the fresh ID to filter
                     if (payload.sender === myId) {
-                        console.log(`🔍 Ignoring self-broadcast: ${payload.type} from ${myId}`);
+                        console.log(`[APP-TELEMETRY] 🔍 Ignoring self-broadcast: ${payload.type} from ${myId}`);
                         return;
                     }
 
-                    console.log(`📡 incoming: [${payload.type}] from ${payload.sender} (I am ${myId})`);
+                    console.log(`[APP-TELEMETRY] 📡 incoming: [${payload.type}] from ${payload.sender} (I am ${myId})`);
 
                     if (payload.type === "OFFER") {
-                        console.log("📥 OFFER detected. Initializing Answerer...");
+                        console.log("[APP-TELEMETRY] 📥 OFFER detected. Initializing Answerer...");
                         setIsCalling(true);
                         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
-                        stream.getAudioTracks().forEach(track => track.enabled = false);
-                        stream.getVideoTracks().forEach(track => track.enabled = false);
+                        console.log("[APP-TELEMETRY] 🎙️ Requested local hardware media access via navigator.mediaDevices.getUserMedia...");
+                        stream.getAudioTracks().forEach(track => {
+                            track.enabled = false
+                        });
+                        
+                        stream.getVideoTracks().forEach(track => {
+                            track.enabled = false
+                            console.log("[APP-TELEMETRY] ⚠️ Privacy Guard Triggered: Disabling local video tracks locally (track.enabled = false).");
+                        });
 
-
+                        console.log("[APP-TELEMETRY] 🎬 Local media stream initialized and safely zeroed out at the hardware boundary.");
                         setLocalStream(stream);
 
                         const peer = new RTCPeerConnection({
@@ -83,13 +103,13 @@ export const useChat = () => {
                         pc.current = peer;
 
                         peer.ontrack = (e) => {
-                            console.log("🎥 REMOTE TRACK RECEIVED!");
+                            console.log("[APP-TELEMETRY] 🎥 REMOTE TRACK RECEIVED!");
                             setRemoteStream(e.streams[0]);
                         };
 
                         peer.onicecandidate = (e) => {
                             if (e.candidate) {
-                                console.log("📤 Sending CANDIDATE to", payload.sender);
+                                console.log("[APP-TELEMETRY] 📤 Sending CANDIDATE to", payload.sender);
                                 sendSignalingMessage("CANDIDATE", e.candidate, payload.sender);
                             }
                         };
@@ -106,15 +126,15 @@ export const useChat = () => {
 
                         const answer = await peer.createAnswer();
                         await peer.setLocalDescription(answer);
-                        console.log("📤 Sending ANSWER back to", payload.sender, ". Answer: ", answer);
+                        console.log("[APP-TELEMETRY] 📤 Sending ANSWER back to", payload.sender, ". Answer: ", answer);
                         sendSignalingMessage("ANSWER", answer, payload.sender);
                     }
 
                     else if (payload.type === "ANSWER") {
-                        console.log("📥 ANSWER detected. Current PC state:", pc.current?.signalingState);
+                        console.log("[APP-TELEMETRY] 📥 ANSWER detected. Current PC state:", pc.current?.signalingState);
                         if (pc.current) {
                             await pc.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(payload.data)));
-                            console.log("🔗 Handshake STABLE");
+                            console.log("[APP-TELEMETRY] 🔗 Handshake STABLE");
 
                             while (iceCandidateQueue.current.length > 0) {
                                 const cand = iceCandidateQueue.current.shift();
@@ -126,19 +146,45 @@ export const useChat = () => {
                     }
 
                     else if (payload.type === "CANDIDATE") {
-                        console.log("📥 CANDIDATE detected.");
+                        console.log("[APP-TELEMETRY] 📥 CANDIDATE detected.");
                         const candidateData = JSON.parse(payload.data);
                         if (pc.current && pc.current.remoteDescription) {
                             try {
                                 await pc.current.addIceCandidate(new RTCIceCandidate(candidateData));
-                                console.log("✅ Candidate added to existing connection");
+                                console.log("[APP-TELEMETRY] ✅ Candidate added to existing connection");
                             } catch (e) {
                                 console.error("❌ Error adding ICE candidate", e);
                             }
                         } else {
-                            console.log("🕒 Queueing candidate...");
+                            console.log("[APP-TELEMETRY] 🕒 Queueing candidate...");
                             iceCandidateQueue.current.push(candidateData);
                         }
+                    }
+
+                    else if (payload.type === "HANGUP") {
+                        console.log(`[APP-TELEMETRY] 🛑 Remote peer [${payload.sender}] hung up. Executing local teardown.`);
+                        
+                        if (pc.current) {
+                            pc.current.close();
+                            pc.current = null;
+                        }
+                        
+                        setLocalStream(prevStream => {
+                            if (prevStream) prevStream.getTracks().forEach(track => track.stop());
+                            return null;
+                        });
+
+                        setRemoteStream(prevStream => {
+                            if (prevStream) prevStream.getTracks().forEach(track => track.stop());
+                            return null;
+                        });
+
+                        if (screenStreamRef.current) {
+                            screenStreamRef.current.getTracks().forEach(track => track.stop());
+                            screenStreamRef.current = null;
+                        }
+
+                        setIsCalling(false);
                     }
                 });
             },
@@ -175,12 +221,21 @@ export const useChat = () => {
 
     const startCall = async (receiver: string) => {
         setIsCalling(true);
+
+        console.log("[APP-TELEMETRY] 🎙️ Requested local hardware media access via navigator.mediaDevices.getUserMedia...");
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
         // START MUTED: Disable tracks immediately
-        stream.getAudioTracks().forEach(track => track.enabled = false);
-        stream.getVideoTracks().forEach(track => track.enabled = false);
+        stream.getAudioTracks().forEach(track => {
+            track.enabled = false
+            console.log("[APP-TELEMETRY] ⚠️ Privacy Guard Triggered: Disabling local audio tracks locally (track.enabled = false).");
+        });
+        stream.getVideoTracks().forEach(track => {
+            track.enabled = false
+            console.log("[APP-TELEMETRY] ⚠️ Privacy Guard Triggered: Disabling local video tracks locally (track.enabled = false).");
+        });
 
+        console.log("[APP-TELEMETRY] 🎬 Local media stream initialized and safely zeroed out at the hardware boundary.");
         setLocalStream(stream);
 
         pc.current = new RTCPeerConnection({
@@ -201,7 +256,7 @@ export const useChat = () => {
 
         // Listen for the other person's video
         pc.current.ontrack = (event) => {
-            console.log("🎥 Remote track received!", event.streams[0]);
+            console.log("[APP-TELEMETRY] 🎥 Remote track received!", event.streams[0]);
             setRemoteStream(event.streams[0]);
         };
 
@@ -228,7 +283,10 @@ export const useChat = () => {
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 screenStreamRef.current = screenStream;
 
-                // 2. Replace Track (Senior Flex: replaceTrack is seamless)
+                // 2. Signal to the UI that presentation mode is active
+                setIsScreenSharing(true);
+
+                // 3. Replace Track (Senior Flex: replaceTrack is seamless)
                 const videoTrack = screenStream.getVideoTracks()[0];
                 const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
 
@@ -236,9 +294,14 @@ export const useChat = () => {
                     sender.replaceTrack(videoTrack);
                 }
 
-                // 3. Handle user stopping share via browser UI
+                // 4. Handle user stopping share via browser UI
                 videoTrack.onended = () => stopScreenShare();
-                setLocalStream(screenStream); // Update UI to show screen in small box
+
+                setLocalStream(prevStream => {
+                    if (prevStream) prevStream.getTracks().forEach(track => track.stop());  // Stop camera stream first
+                    return screenStream;  // Then update UI to show screen in small box
+                });
+
             } else {
                 stopScreenShare();
             }
@@ -250,16 +313,90 @@ export const useChat = () => {
 
     const stopScreenShare = async () => {
         if (screenStreamRef.current) {
+            // 1. Stop screen capture
+            console.log("[APP-TELEMETRY] 🧼 Terminating screen capture stream. Restoring camera track context...");
             screenStreamRef.current.getTracks().forEach(t => t.stop());
             screenStreamRef.current = null;
 
-            // Switch back to camera
+            // 2. Update state engine to signal UI iconography to reset
+            setIsScreenSharing(false);
+
+            // 3. Fetch native fallback user media tracks
             const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             const videoTrack = cameraStream.getVideoTracks()[0];
-            const sender = pc.current?.getSenders().find(s => s.track?.kind === 'video');
 
-            if (sender) sender.replaceTrack(videoTrack);
+            // 4. CRITICAL STATE GUARD: Enforce the pre-existing privacy boundary context
+            // If the video was explicitly off, zero out the track to prevent accidental leaks
+            if (isVideoOff) {
+                videoTrack.enabled = false;
+                console.log("[APP-TELEMETRY] 🔒 Privacy Guard Preserved: Fallback camera track initialized as DISABLED");
+            } else {
+                console.log("[APP-TELEMETRY] 📸 Fallback camera track initialized as ENABLED");
+            }
+
+            // 5. Hot-swap the media context over the active WebRTC peer connection mid-flight
+            const sender = pc.current?.getSenders().find(s => s.track?.kind === 'video');
+            if (sender) {
+                await sender.replaceTrack(videoTrack);
+            }
+            
+            // 6. Update the local rendering stream layer with our privacy-aware stream
             setLocalStream(cameraStream);
+        }
+    };
+
+    const endCall = () => {
+        console.log("[APP-TELEMETRY] 🧼 Initiating local call teardown and broadcasting HANGUP...");
+
+        // 1. Publish straight to the topic queue, completely bypassing the /app controller mapping prefix
+        if (stompClientRef.current && stompClientRef.current.connected) {
+            stompClientRef.current.publish({
+                destination: "/topic/public",
+                body: JSON.stringify({
+                    type: "HANGUP",
+                    sender: currentUser, // Ensure your tracking variable passes the sender name
+                    data: { status: "ended" }
+                })
+            });
+        }
+
+        // 2. Clear out the localized networking instance
+        if (pc.current) {
+            pc.current.close();
+            pc.current = null;
+        }
+
+        // 3. Clear out media tracking pointers to turn off webcams
+        setLocalStream(prevStream => {
+            if (prevStream) prevStream.getTracks().forEach(track => track.stop());
+            return null;
+        });
+
+        setRemoteStream(prevStream => {
+            if (prevStream) prevStream.getTracks().forEach(track => track.stop());
+            return null;
+        });
+
+        if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(track => track.stop());
+            screenStreamRef.current = null;
+        }
+
+        setIsScreenSharing(false);
+        setIsCalling(false);
+    };
+
+    const toggleMic = () => {
+        if (localStream) {
+            localStream.getAudioTracks().forEach(track => track.enabled = isMuted);
+            setIsMuted(!isMuted);
+        }
+    };
+
+    const toggleVideo = () => {
+        if (localStream) {
+            localStream.getVideoTracks().forEach(track => track.enabled = isVideoOff);
+            setIsVideoOff(!isVideoOff);
         }
     };
 
@@ -268,11 +405,17 @@ export const useChat = () => {
         sendMessage,
         sendSignalingMessage,
         startCall,      // The function to trigger a call
+        endCall,        // The function to end a call
         localStream,    // Your camera feed
         remoteStream,   // Their camera feed
         isCalling,      // Boolean to show/hide the UI
         setIsCalling,    // To close the UI on hangup
         toggleScreenShare,
-        stopScreenShare
+        stopScreenShare,
+        isMuted,
+        isVideoOff,
+        isScreenSharing,
+        toggleMic,
+        toggleVideo
     };
 };

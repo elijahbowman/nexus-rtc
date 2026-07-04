@@ -2,6 +2,7 @@ package com.portfolio.realtimecommunication.backend.config;
 
 import com.portfolio.realtimecommunication.backend.security.JwtUtils;
 import com.portfolio.realtimecommunication.backend.service.UserDetailsServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -20,6 +21,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@Slf4j
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Autowired
@@ -55,12 +57,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         String token = authHeader.substring(7);
                         if (jwtUtils.validateJwtToken(token)) {
                             String username = jwtUtils.getUserNameFromJwtToken(token);
+
+                            log.info("WebSocket Interceptor: Processing CONNECT frame for user: {}", username);
+
                             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                             UsernamePasswordAuthenticationToken auth =
                                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
                             // Set the user into the WebSocket session
                             accessor.setUser(auth);
+
+                            log.info("JWT Cryptographically Verified. Mapping session to Principal: {}", username);
                         }
                     }
                 }

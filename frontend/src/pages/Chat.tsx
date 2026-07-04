@@ -9,11 +9,16 @@ const Chat = () => {
         messages,
         sendMessage,
         startCall,
+        endCall,
         localStream,
         remoteStream,
         isCalling,
-        setIsCalling,
-        toggleScreenShare
+        toggleScreenShare,
+        isMuted,
+        isVideoOff,
+        isScreenSharing,
+        toggleMic,
+        toggleVideo
     } = useChat();
 
     const handleSend = (e: React.BaseSyntheticEvent) => {
@@ -22,12 +27,6 @@ const Chat = () => {
             sendMessage(input);
             setInput('');
         }
-    };
-
-    const handleHangUp = () => {
-        // Stop the camera tracks
-        localStream?.getTracks().forEach(track => track.stop());
-        setIsCalling(false);
     };
 
     const handleLogout = () => {
@@ -42,8 +41,13 @@ const Chat = () => {
                 <VideoCall
                     localStream={localStream}
                     remoteStream={remoteStream}
-                    onHangUp={handleHangUp}
+                    endCall={endCall}
                     onToggleScreenShare={toggleScreenShare}
+                    isMuted={isMuted}
+                    isVideoOff={isVideoOff}
+                    isScreenSharing={isScreenSharing}
+                    toggleMic={toggleMic}
+                    toggleVideo={toggleVideo}
                 />
             )}
 
