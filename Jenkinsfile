@@ -31,6 +31,8 @@ pipeline {
                         SPRING_DATASOURCE_URL = 'jdbc:postgresql://host.docker.internal:5433/realtime_communication_db'
                         SPRING_DATASOURCE_USERNAME = 'dev'
                         SPRING_DATASOURCE_PASSWORD = 'password'
+                        SPRING_DATA_REDIS_HOST = 'host.docker.internal'
+                        SPRING_DATA_REDIS_PORT = 6380
                     }
                     steps {
                         script {
@@ -41,6 +43,9 @@ pipeline {
                                 // 1. Provision a dynamic database container on the host daemon using our DooD volume link.
                                 // Map host port 5433 to container port 5432 to avoid colliding with any local dev DB instances.
                                 sh 'docker run -d --name test-postgres-db -p 5433:5432 -e POSTGRES_DB=realtime_communication_db -e POSTGRES_USER=dev -e POSTGRES_PASSWORD=password postgres:15'
+
+
+                                sh 'docker run -d --name test-redis -p 6380:6379 redis:7-alpine'
                                 
                                 // 2. Race-Condition Mitigation: Deliberately pause pipeline execution for 5 seconds.
                                 // This provides the PostgreSQL background engine adequate time to allocate internal memory 
@@ -55,6 +60,8 @@ pipeline {
                                 // 4. Mandatory Post-Execution Cleanup Layer: Forcefully terminates and purges the sidecar database 
                                 // container, restoring port 5433 to a completely clean, unallocated state.
                                 sh 'docker stop test-postgres-db && docker rm test-postgres-db'
+
+                                sh 'docker stop test-redis && docker rm test-redis'
                             }
                         }
                     }

@@ -22,8 +22,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/realtime_communication_db
       SPRING_DATASOURCE_USERNAME: dev
       SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATA_REDIS_HOST: redis
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   frontend:
@@ -49,7 +51,16 @@ services:
       - ./coturn/turnserver.conf:/etc/turnserver.conf:ro
     command: turnserver -c /etc/turnserver.conf --log-file=stdout
     restart: unless-stopped
+  
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379" # Maps the networking port to your host machine for test runners
+    volumes:
+      - redisdata:/data
 
 volumes:
   pg_persistence_layer:
     driver: local
+  redisdata:
