@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coturn-config
+  labels:
+    app: rtc-portfolio
+    component: turn
+data:
+  turnserver.conf: |
+    listening-port=3478
+    tls-listening-port=5349
+    lt-cred-mech
+    realm=discord-turn
+    log-file=stdout
+    verbose
+    no-cli
+    min-port=49152
+    max-port=49252
+    fingerprint
+    user=devuser:devpassword
+    listening-ip=0.0.0.0
+    external-ip=10.0.0.58
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtc-coturn
+  labels:
+    app: rtc-portfolio
+    component: turn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rtc-portfolio
+      component: turn
+  template:
+    metadata:
+      labels:
+        app: rtc-portfolio
+        component: turn 
+    spec:
+      # Bypasses overlay NAT traps
+      # Binds coturn straight to physical machine's 10.0.0.58 network path
+      hostNetwork: true
+      containers:
+      - name: coturn
+        image: coturn/coturn:4.6.2-alpine
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coturn/turnserver.conf
+          subPath: turnserver.conf  # Maps the explicit file snapshot cleanly
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+      volumes:
+      - name: config-volume
+        configMap:
+          name: coturn-config

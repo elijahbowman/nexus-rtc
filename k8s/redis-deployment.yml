@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtc-redis
+  labels:
+    app: rtc-portfolio
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rtc-portfolio
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: rtc-portfolio
+        component: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis-port
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtc-redis-service
+  labels:
+    app: rtc-portfolio
+    component: redis
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: rtc-portfolio
+    component: redis
+  type: ClusterIP

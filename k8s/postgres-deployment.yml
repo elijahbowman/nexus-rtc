@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+  labels:
+    app: rtc-portfolio
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rtc-portfolio
+      component: database
+  template:
+    metadata:
+      labels:
+        app: rtc-portfolio
+        component: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: db-port
+        env:
+        - name: POSTGRES_DB
+          value: "realtime_communication_db"
+        - name: POSTGRES_USER
+          value: "dev"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db-service  # Matches DB host variable inside backend deployment config
+  labels:
+    app: rtc-portfolio
+    component: database
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: rtc-portfolio
+    component: database
+  type: ClusterIP

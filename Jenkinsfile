@@ -92,5 +92,45 @@ pipeline {
                 sh 'docker build -t realtime-communication-frontend:latest ./frontend'
             }
         }
+
+        stage('Deploy to Local K8s Cluster') {
+            environment {
+                // Maps Jenkins Secret Text encrypted environment variable string
+                CLUSTER_TOKEN = credentials('K8S_CLUSTER_TOKEN')
+            }
+            steps {
+                script {
+                    // 1. Download and authorize our isolated tool asset
+                    sh 'curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"'  // Dynamically checks and fetches the current absolute stable release
+                    sh 'chmod +x ./kubectl'
+                    
+                    // 2. Define an isolated, scratchpad config path inside the workspace
+                    def pipelineKubeconfig = "${workspace}/pipeline.kubeconfig"
+                    
+                    // 3. Programmatically build a certificate-free config file using the secure environment variable
+                    sh "./kubectl config set-cluster local-cluster --server=https://host.docker.internal:53663 --insecure-skip-tls-verify=true --kubeconfig=${pipelineKubeconfig}"
+                    // Use single-quotes with system environment reference to resolve the Groovy Interpolation warning completely
+                    sh './kubectl config set-credentials pipeline-admin --token=' + env.CLUSTER_TOKEN + ' --kubeconfig=' + pipelineKubeconfig
+                    sh "./kubectl config set-context local-ctx --cluster=local-cluster --user=pipeline-admin --kubeconfig=${pipelineKubeconfig}"
+                    sh "./kubectl config use-context local-ctx --kubeconfig=${pipelineKubeconfig}"
+                    
+                    // 4. Stream host images directly into minikube cluster container cache
+                    // This bypasses minikube cli constraints entirely via raw docker sockets
+                    sh 'docker save realtime-communication-backend:latest | docker exec -i minikube docker load'
+                    sh 'docker save realtime-communication-frontend:latest | docker exec -i minikube docker load'
+                    
+                    // 5. Deploy entire decoupled folder using config document
+                    sh "./kubectl apply -f ./k8s/ --kubeconfig=${pipelineKubeconfig} --validate=false"
+                    
+                    // 6. Force immediate rollout update verification
+                    sh "./kubectl rollout restart deployment/rtc-backend --kubeconfig=${pipelineKubeconfig}"
+                    sh "./kubectl rollout restart deployment/rtc-frontend --kubeconfig=${pipelineKubeconfig}"
+                    
+                    // Track rollout completion rules safely
+                    sh "./kubectl rollout status deployment/rtc-backend --kubeconfig=${pipelineKubeconfig}"
+                    sh "./kubectl rollout status deployment/rtc-frontend --kubeconfig=${pipelineKubeconfig}"
+                }
+            }
+        }
     }    
 }

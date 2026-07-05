@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtc-backend
+  labels:
+    app: rtc-portfolio
+    component: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: rtc-portfolio
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: rtc-portfolio
+        component: backend
+    spec:
+      containers:
+      - name: backend
+        image: realtime-communication-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http-port
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres-db-service:5432/realtime_communication_db"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "dev"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "password"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "rtc-redis-service"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtc-backend-service
+  labels:
+    app: rtc-portfolio
+    component: backend
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: rtc-portfolio
+    component: backend
+  type: ClusterIP
