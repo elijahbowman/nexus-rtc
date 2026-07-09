@@ -1,6 +1,8 @@
 package com.portfolio.realtimecommunication.backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,9 +21,30 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
+    @Column(nullable = false)
     private String sender;
-    private String content;
-    private LocalDateTime timestamp;
 
-    // TODO: In a extending version, add channelId here
+    @NotBlank
+    @Column(nullable = false, columnDefinition = "TEXT") // Allows long-form chat payloads without clipping
+    private String content;
+
+    @Column(name = "timestamp", nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
+
+    @NotNull
+    @Column(name = "channel_id", nullable = false)
+    private Long channelId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessageType type;
+
+    public enum MessageType {
+        CHAT,
+        JOIN,
+        LEAVE
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.portfolio.realtimecommunication.backend.security;
 
+import com.portfolio.realtimecommunication.backend.service.UserDetailsImpl;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -17,7 +18,7 @@ public class JwtUtils {
     private int jwtExpirationMs = 86400000; // 24 hours
 
     public String generateJwtToken(Authentication authentication) {
-        UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
 
         if (userPrincipal == null) {
             throw new IllegalArgumentException("Authentication principal or username cannot be null");
@@ -25,6 +26,7 @@ public class JwtUtils {
 
         return Jwts.builder()
                 .setSubject(userPrincipal.getUsername())
+                .claim("userId", userPrincipal.getId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)

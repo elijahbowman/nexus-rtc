@@ -31,6 +31,7 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     // Standard Getters/Overrides... (username, password, etc.)
+    @Nonnull public Long getId() { return id; }
     @Override @Nonnull public String getUsername() { return username; }
     @Override public String getPassword() { return password; }
     @Override public boolean isAccountNonExpired() { return true; }
