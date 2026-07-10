@@ -28,16 +28,18 @@ const VideoCall: React.FC<VideoCallProps> = ({
     const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
 
     React.useEffect(() => {
-        if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
+        const localVideo = localVideoRef.current;
+        if (localVideo) localVideo.srcObject = localStream;
     }, [localStream]);
 
     React.useEffect(() => {
         const playRemote = async () => {
-            if (remoteVideoRef.current && remoteStream) {
-                remoteVideoRef.current.srcObject = remoteStream;
+            const remoteVideo = remoteVideoRef.current;
+            if (remoteVideo && remoteStream) {
+                remoteVideo.srcObject = remoteStream;
                 try {
                     // Force play to overcome Safari/Chrome autoplay restrictions
-                    await remoteVideoRef.current.play();
+                    await remoteVideo.play();
                     console.log("[APP-TELEMETRY] ▶️ Remote stream playing");
                 } catch (err) {
                     console.warn("⚠️ Autoplay blocked, waiting for interaction:", err);

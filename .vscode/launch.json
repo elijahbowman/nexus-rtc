@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "WebRTC Peer 1",
+            "url": "http://localhost",
+            "webRoot": "${workspaceFolder}/frontend",
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-profile-1"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "WebRTC Peer 2",
+            "url": "http://localhost",
+            "webRoot": "${workspaceFolder}/frontend",
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-profile-2"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Simulate WebRTC Call",
+            "configurations": [
+                "WebRTC Peer 1",
+                "WebRTC Peer 2"
+            ]
+        }
+    ]
+}
