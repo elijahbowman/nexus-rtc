@@ -5,7 +5,7 @@ spring:
     password: password
   jpa:
     hibernate:
-      ddl-auto: update # Automatically creates tables based on User entity
+      ddl-auto: validate # Guard data profiles by relying strictly on Flyway SQL files!
     show-sql: true
     properties:
       hibernate:
