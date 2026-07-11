@@ -33,6 +33,10 @@ pipeline {
                         SPRING_DATASOURCE_PASSWORD = 'password'
                         SPRING_DATA_REDIS_HOST = 'host.docker.internal'
                         SPRING_DATA_REDIS_PORT = 6380
+                        AWS_ACCESS_KEY_ID = 'devuser'
+                        AWS_SECRET_ACCESS_KEY = 'devpassword'
+                        MINIO_URL = 'http://host.docker.internal:9000'
+                        MINIO_BUCKET_NAME = 'nexus-rtc-attachments'
                     }
                     steps {
                         script {

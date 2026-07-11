@@ -4,6 +4,7 @@ import com.portfolio.realtimecommunication.backend.model.Channel;
 import com.portfolio.realtimecommunication.backend.model.ChatMessage;
 import com.portfolio.realtimecommunication.backend.repository.ChatMessageRepository;
 import com.portfolio.realtimecommunication.backend.service.ChannelService;
+import com.portfolio.realtimecommunication.backend.service.StorageFacade;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ChannelController {
 
     private final ChannelService channelService;
     private final ChatMessageRepository chatMessageRepository;
+    private final StorageFacade storageFacade;
 
     // 1. CREATE ROOM: Instantiates a fresh chat space inside the data inventory
     @PostMapping
@@ -90,7 +92,25 @@ public class ChannelController {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN); // Return a clean 403 Forbidden
         }
 
+        // Pull the raw chronological logs directly out of PostgreSQL memory blocks
         List<ChatMessage> history = chatMessageRepository.findByChannelIdOrderByTimestampAsc(channelId);
+
+        // THE STORAGE TRANSITION ENGINE: Generate pre-signed URL vectors for all attachments
+        history.forEach(message -> {
+            if (message.getAttachmentPath() != null && !message.getAttachmentPath().isBlank()) {
+                try {
+                    // Resolve a secure, 2-hour pre-signed access URL straight from MinIO/S3
+                    String secureUrl = storageFacade.getPresignedUrl(message.getAttachmentPath());
+
+                    // Assign it straight to the Lombok @Transient field for JSON serialization transport!
+                    message.setAttachmentUrl(secureUrl);
+
+                } catch (Exception e) {
+                    log.error("Failed to compile pre-signed URL wrapper for message index {}: {}", message.getId(), e.getMessage());
+                }
+            }
+        });
+
         return ResponseEntity.ok(history);
     }
 

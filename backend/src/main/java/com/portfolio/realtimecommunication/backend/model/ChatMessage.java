@@ -47,4 +47,15 @@ public class ChatMessage {
         LEAVE
     }
 
+    @Column(name = "attachment_path")
+    private String attachmentPath;
+
+    @Column(name = "attachment_type")
+    private String attachmentType;
+
+    // Holds the temporary, live presigned download URL
+    // Mark as @Transient so Hibernate completely ignores it during standard SQL table writes!
+    @Transient
+    private String attachmentUrl;
+
 }

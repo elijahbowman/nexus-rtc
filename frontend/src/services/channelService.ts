@@ -18,6 +18,9 @@ export interface ChatMessagePayload {
   content: string;
   type: 'CHAT' | 'JOIN' | 'LEAVE';
   timestamp?: string;
+  attachmentPath?: string;
+  attachmentType?: string;
+  attachmentUrl?: string; // Captures transient presigned target urls
 }
 
 export interface ChannelCreationRequest {
@@ -26,7 +29,7 @@ export interface ChannelCreationRequest {
 }
 
 export const channelService = {
-  
+
   // 1. CREATE: Dispatches a room initialization payload to the backend data layer
   createChannel: async (request: ChannelCreationRequest): Promise<Channel> => {
     const response = await api.post<Channel>(`${API_BASE_URL}/api/channels`, request);

@@ -3,6 +3,7 @@ package com.portfolio.realtimecommunication.backend.controller;
 import com.portfolio.realtimecommunication.backend.model.ChatMessage;
 import com.portfolio.realtimecommunication.backend.repository.ChatMessageRepository;
 import com.portfolio.realtimecommunication.backend.service.ChannelService;
+import com.portfolio.realtimecommunication.backend.service.StorageFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,10 +23,16 @@ public class ChatController {
     private final SimpMessageSendingOperations messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
     private final ChannelService channelService;
+    private final StorageFacade storageFacade;
 
     // REAL-TIME ISOLATION LAYER: Dynamic Channel Routing Hub
     @MessageMapping("/chat.sendMessage/{channelId}")
     public void sendMessage(@DestinationVariable Long channelId, @Payload ChatMessage chatMessage) {
+        if (chatMessage == null) {
+            log.error("[WS-METRIC] Rejected inbound messaging frame: Payload is completely null.");
+            return;
+        }
+
         log.info("Processing WebSocket text frame payload for distributed channel space ID: {}", channelId);
 
         // Enforce implicit parameter sync to prevent client payload spoofing
@@ -34,6 +41,19 @@ public class ChatController {
         // Production Security Guard: Bypasses data layer execution if user lacks access metrics
         // (Will be activated once security principal parameters are fully mapped into session context)
         // if (!channelService.isUserMemberOfChannel(channelId, fetchUserPrincipalFromSession())) { return; }
+
+        // THE MULTIMEDIA EXTENSION: Log active file attachment metrics for cluster tracking
+        // REAL-TIME HYDRATION: Generate the URL immediately for live users so they don't have to reload!
+        if (chatMessage.getAttachmentPath() != null && !chatMessage.getAttachmentPath().isBlank()) {
+            log.info("[WS-METRIC] Multimedia payload intercepted inside channel {}. Path: {}, MIME: {}",
+                    channelId, chatMessage.getAttachmentPath(), chatMessage.getAttachmentType());
+            try {
+                String instantUrl = storageFacade.getPresignedUrl(chatMessage.getAttachmentPath());
+                chatMessage.setAttachmentUrl(instantUrl); // Hydrate the transient property on the active payload!
+            } catch (Exception e) {
+                log.error("Failed to hydrate live streaming url frame: {}", e.getMessage());
+            }
+        }
 
         // 1. Persist the text record safely to the cloud-native database engine
         chatMessageRepository.save(chatMessage);
