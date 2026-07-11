@@ -136,5 +136,19 @@ pipeline {
                 }
             }
         }
+
+        stage('Security Analysis: Container Image Scan') {
+            steps {
+                script {
+                    echo "[JENKINS-PIPELINE] Initiating automated container vulnerabilities scan via Trivy engine..."
+                    
+                    // 1. Scan your backend image layer, forcing compilation warnings but bypassing hard failures for dev
+                    sh "trivy image --severity HIGH,CRITICAL --format table realtime-communication-backend:latest || true"
+                    
+                    // 2. Scan your frontend interface container layer
+                    sh "trivy image --severity HIGH,CRITICAL --format table realtime-communication-frontend:latest || true"
+                }
+            }
+        }
     }    
 }
