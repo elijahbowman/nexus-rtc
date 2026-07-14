@@ -4,7 +4,14 @@ import { channelService, type Channel } from '../services/channelService';
 export const useChannels = (currentUserId?: number) => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [userChannels, setUserChannels] = useState<Channel[]>([]);
-  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  const [activeChannel, setActiveChannel] = useState<Channel | null>(() => {
+    const savedChannel = localStorage.getItem('activeChannel');
+    try {
+      return savedChannel ? JSON.parse(savedChannel) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +32,8 @@ export const useChannels = (currentUserId?: number) => {
 
       // Auto-select a default fallback room if no active selection is initialized
       if (!activeChannel && allRooms.length > 0) {
-        // Optimistically defaults to a '#general' room layout if present
-        const generalRoom = allRooms.find(r => r.name === 'general');
-        setActiveChannel(generalRoom || allRooms[0]);
+        console.log("[CHANNELS-HOOK] Standby state initialized. Waiting for user sidebar interaction.");
+         setActiveChannel(null); // Leaves the main panel empty until a channel is actively chosen
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to sync distributed channel inventories.');

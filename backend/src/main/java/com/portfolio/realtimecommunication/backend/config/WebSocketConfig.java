@@ -32,10 +32,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // prefix for messages the server sends TO the client
-        config.enableSimpleBroker("/topic");
-        // prefix for messages the client sends TO the server
+        // prefix for messages the server sends TO the client (BOTH broadcast topics and user-specific queues!)
+        config.enableSimpleBroker("/topic", "/queue");
+        // prefix for messages the client sends TO the server routed to @MessageMapping controllers
         config.setApplicationDestinationPrefixes("/app");
+        // Prefix for Spring Security UserDestinationMessageHandler private destination routing
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override

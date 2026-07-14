@@ -58,4 +58,6 @@ public class ChatMessage {
     @Transient
     private String attachmentUrl;
 
+    @Transient
+    private String channelName;
 }

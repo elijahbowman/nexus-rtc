@@ -1,14 +1,37 @@
 @import "tailwindcss";
 
-@theme {
-  --color-discord-blue: #5865f2;
-  --color-discord-dark: #313338;
-  --color-discord-black: #1e1f22;
-  --color-discord-gray: #b5bac1;
+/* ==========================================================================
+   1. CHROME & SAFARI (Precision WebKit Engine Customization)
+   ========================================================================== */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
 }
 
-@layer base {
-  body {
-    @apply bg-discord-black text-white antialiased;
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #0b1329 !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.25) !important;
+  border-radius: 4px !important;
+}
+
+/* Micro-precise hover: Triggers ONLY when directly over the thumb handle */
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.45) !important;
+}
+
+
+/* ==========================================================================
+   2. FIREFOX ONLY ISOLATION (Safe Theme Matching)
+   ========================================================================== */
+/* This specific selector filter ensures Chrome and Safari remain blind to 
+   the standard spec rules, completely preserving their custom hover mechanics. */
+@supports (-moz-appearance: none) {
+  .scrollbar-thin {
+    scrollbar-width: thin !important;
+    /* Static styling alignment matching base UI configuration */
+    scrollbar-color: rgba(99, 102, 241, 0.25) #0b1329 !important;
   }
 }

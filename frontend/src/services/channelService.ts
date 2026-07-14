@@ -14,6 +14,7 @@ export interface Channel {
 export interface ChatMessagePayload {
   id?: number;
   channelId: number;
+  channelName?: string;
   sender: string;
   content: string;
   type: 'CHAT' | 'JOIN' | 'LEAVE';

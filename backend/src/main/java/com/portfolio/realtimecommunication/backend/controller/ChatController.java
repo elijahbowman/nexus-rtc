@@ -24,6 +24,7 @@ public class ChatController {
     private final ChatMessageRepository chatMessageRepository;
     private final ChannelService channelService;
     private final StorageFacade storageFacade;
+    private final NotificationController notificationController;
 
     // REAL-TIME ISOLATION LAYER: Dynamic Channel Routing Hub
     @MessageMapping("/chat.sendMessage/{channelId}")
@@ -56,7 +57,15 @@ public class ChatController {
         }
 
         // 1. Persist the text record safely to the cloud-native database engine
-        chatMessageRepository.save(chatMessage);
+        ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
+
+        // THE PUSH NOTIFICATION EXTENSION HOOK:
+        // Automatically dispatch background badges/alerts to all other room members!
+        try {
+            notificationController.dispatchChannelNotifications(channelId, savedMessage, savedMessage.getSender());
+        } catch (Exception e) {
+            log.error("[WS-METRIC] Non-blocking exception inside background notification loop: {}", e.getMessage());
+        }
 
         // 2. BROADCAST: Publish the payload across our Phase 2 Redis horizontal cluster topic layer
         // This ensures that all instances in our Kubernetes cluster intercept the message instantly

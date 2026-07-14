@@ -115,7 +115,7 @@ export const useChat = () => {
         await peerConnection.setLocalDescription(offer);
 
         sendSignalingMessage("OFFER", offer, receiver);
-    // }, [initializeLocalHardwareStream, sendSignalingMessage])
+        // }, [initializeLocalHardwareStream, sendSignalingMessage])
     }, [])
 
     const stopScreenShare = useCallback(async () => {
@@ -268,8 +268,10 @@ export const useChat = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
 
+        const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'; // Standard WebSocket URL (localhost:8080)
+
         const client = new Client({
-            brokerURL: 'ws://localhost:8080/ws', // Standard WebSocket URL
+            brokerURL: WS_URL,
             connectHeaders: {
                 Authorization: `Bearer ${token}`
             },
@@ -312,7 +314,7 @@ export const useChat = () => {
                     if (payload.type === "OFFER") {
                         console.log("[APP-TELEMETRY] 📥 OFFER detected. Initializing Answerer...");
                         setIsCalling(true);
-                        
+
                         const stream = await initializeLocalHardwareStream();
 
                         const peerConnection = new RTCPeerConnection({
@@ -382,8 +384,8 @@ export const useChat = () => {
                             console.log("[APP-TELEMETRY] 🕒 Queueing candidate...");
                             iceCandidateQueue.current.push(candidateData);
                             return;
-                        }                    
-                        
+                        }
+
                         try {
                             await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
                             console.log("[APP-TELEMETRY] ✅ Candidate added to existing connection");
@@ -396,7 +398,7 @@ export const useChat = () => {
                         console.log(`[APP-TELEMETRY] 🛑 Remote peer [${payload.sender}] hung up. Executing local teardown.`);
 
                         const peerConnection = peerConnectionRef.current;
-                        
+
                         if (peerConnection) {
                             peerConnection.close();
                             peerConnectionRef.current = null;
@@ -423,6 +425,19 @@ export const useChat = () => {
                         setIsCalling(false);
                     }
                 });
+
+                // PUSH NOTIFICATION CLIENT TRACKER
+                // Connects natively to the private user-isolated destination queue engineered in Spring Boot
+                if (currentUser) {
+                    console.log(`[NOTIF-CLIENT] Registering incoming push alert channel listener for: ${currentUser}`);
+                    client.subscribe(`/queue/notifications/${currentUser}`, (message) => {
+                        const pushNotification = JSON.parse(message.body);
+                        console.log('[NOTIF-CLIENT] 🔔 Background push notification event intercepted:', pushNotification);
+
+                        // Fires a global custom DOM event to dispatch snackbar warnings onto MainChat view layers
+                        window.dispatchEvent(new CustomEvent('app-push-notification', { detail: pushNotification }));
+                    });
+                }
             },
             onStompError: (frame) => {
                 console.error('Broker reported error: ' + frame.headers['message']);
@@ -435,8 +450,8 @@ export const useChat = () => {
         return () => {
             client.deactivate();
         };
-    // }, [initializeLocalHardwareStream, sendSignalingMessage]);
-    }, []);
+        // }, [initializeLocalHardwareStream, sendSignalingMessage]);
+    }, [currentUser]);
 
     return {
         messages,

@@ -18,6 +18,9 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Temporary local message state hook to capture background events, register a listener for the custom app-push-notification window trigger, and map a floating alert modal right above your textbox layout
+  const [activeNotification, setActiveNotification] = useState<ChatMessagePayload | null>(null);
+
   // Hooking our automated multi-channel controllers
   const {
     channels,
@@ -62,6 +65,12 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
     // Step A: Execute asynchronous historical extraction out of PostgreSQL
     const loadRoomHistoryAndConnect = async () => {
+      // PROTECTION GUARD: Abort instantly if no channel is selected yet!
+      if (!activeChannel || !activeChannel.id) {
+        console.log("[CHANNELS-GATE] No channel selected on boot. Standing by in placeholder state.");
+        return;
+      }
+
       try {
         console.log(`Extracting chat logs for channel ID: ${activeChannel.id}`);
         const historyData: ChatMessagePayload[] = await channelService.getChannelHistory(activeChannel.id, userId);
@@ -125,6 +134,38 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     };
   }, [activeChannel, username, userId]);
 
+  // 🚀 INTERCEPT BACKGROUND EVENT BROADCASTS CHANNELS
+  useEffect(() => {
+    const handleIncomingNotification = (e: Event) => {
+      const customEvent = e as CustomEvent<ChatMessagePayload>;
+      const notificationData = customEvent.detail;
+
+      // UX SANITY CHECK: Only trigger an alert badge if the message belongs to a DIFFERENT room channel!
+      if (activeChannel && notificationData.channelId !== activeChannel.id) {
+        console.log(`[UI-NOTIFICATION] Displaying sliding snackbar for out-of-channel message: ${notificationData.content}`);
+        setActiveNotification(notificationData);
+
+        // Automatically hide the sliding alert box after 4 seconds of display visibility
+        setTimeout(() => {
+          setActiveNotification(null);
+        }, 4000);
+      }
+    };
+
+    window.addEventListener('app-push-notification', handleIncomingNotification);
+    return () => window.removeEventListener('app-push-notification', handleIncomingNotification);
+  }, [activeChannel]);
+
+  // // AUTOMATED SLIDING TIMER DISMISSAL OVERRIDE
+  // useEffect(() => {
+  //   if (activeNotification) {
+  //     const timer = setTimeout(() => {
+  //       setActiveNotification(null);
+  //     }, 4000);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [activeNotification]);
+
   // 3. SUBMIT CHAT FRAME OPERATION
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +190,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeChannel || !stompClientRef.current?.connected) return;
-    
+
     const targetFile = files[0];
     const formData = new FormData();
     formData.append('file', targetFile);
@@ -194,11 +235,25 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
   // 4. SECURITY INTERCEPTOR: Automatically registers user onto roster if they click an unjoined room
   const handleChannelSelection = async (targetChannel: Channel) => {
     const alreadyMember = userChannels.some((c) => c.id === targetChannel.id);
+    
     if (!alreadyMember) {
+      console.log(`[SECURITY-GATE] User is not a member of channel ${targetChannel.id}. Synchronizing roster first...`);
+      // 🛡️ CRITICAL: Await the database registration pass COMPLETELY before updating active state!
       await joinTargetChannel(targetChannel.id);
     }
+    
+    // Now that the member link is written to PostgreSQL, update active viewport securely
     setActiveChannel(targetChannel);
   };
+
+  useEffect(() => {
+    if (activeChannel) {
+      localStorage.setItem('activeChannel', JSON.stringify(activeChannel));
+    } else {
+      localStorage.removeItem('activeChannel');
+    }
+  }, [activeChannel]);
+
 
   return (
     <div className="flex h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
@@ -266,7 +321,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
 
         {/* Scrolling Chat Timeline Log Feed */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/20">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/20 scrollbar-thin">
           {messages.map((msg, index) => {
             if (msg.type === 'JOIN') {
               return (
@@ -315,16 +370,35 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* FLOATING PUSH NOTIFICATION SNACKBAR PANEL ELEMENT */}
+        {activeNotification && (
+          <div className="mx-4 mb-2 p-3 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl flex items-center justify-between animate-slide-up backdrop-blur-md">
+            <div className="flex items-center space-x-3 truncate">
+              <span className="text-xl">🔔</span>
+              <div className="flex flex-col text-xs truncate">
+                <span className="font-bold text-indigo-400">New message from @{activeNotification.sender} in <span className="text-emerald-400 font-mono">#{activeNotification.channelName || 'chat'}</span></span>
+                <span className="text-slate-300 truncate">{activeNotification.content}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveNotification(null)}
+              className="text-slate-500 hover:text-slate-300 text-xs font-mono font-bold px-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* CHAT INPUT FOOTER WITH INTEGRATED ATTACHMENT CLIP TRAY */}
         <div className="p-4 bg-slate-900/20 border-t border-slate-900 w-full">
           <form onSubmit={handleSendMessage} className="w-full flex space-x-2 items-center">
-            
+
             {/* Hidden native input lane */}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileUpload} 
-              className="hidden" 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
               accept="image/*,application/pdf,text/plain"
             />
 
@@ -339,7 +413,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
               {uploading ? (
                 <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <svg xmlns="http://w3.org" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-paperclip"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <svg xmlns="http://w3.org" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-paperclip"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
               )}
             </button>
 
@@ -351,7 +425,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
               className="flex-1 bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-500 transition-colors"
               disabled={!connected || uploading}
             />
-            
+
             <button
               type="submit"
               disabled={!connected || !typedMessage.trim() || uploading}
@@ -359,7 +433,11 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
             >
               Send
             </button>
+
           </form>
+
+
+
         </div>
       </div>
     </div>
