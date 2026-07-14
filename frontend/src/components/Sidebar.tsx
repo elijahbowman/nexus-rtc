@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { type Channel } from '../services/channelService';
 
 interface SidebarProps {
@@ -24,6 +24,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // ACCESSIBLE THEME PERSISTENCE CONTROL (TAILWIND v4 ALIGNED)
+  const [isLight, setIsLight] = useState<boolean>(() => {
+    return localStorage.getItem('app-theme') === 'light';
+  });
+
   // Submit Handler for Room Provisioning
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,20 +48,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Helper tracking rule to check if the current user has already joined a room list
   const isMember = (channelId: number) => userChannels.some(c => c.id === channelId);
 
+  useEffect(() => {
+    const htmlNode = window.document.documentElement;
+    if (isLight) {
+      htmlNode.classList.add('light-mode');
+      localStorage.setItem('app-theme', 'light');
+    } else {
+      htmlNode.classList.remove('light-mode');
+      localStorage.setItem('app-theme', 'dark');
+    }
+  }, [isLight]);
+
   return (
-    <div className="w-64 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800">
+    <div className="w-64 bg-[var(--theme-card)] text-[var(--theme-text)] flex flex-col h-full border-r border-[var(--theme-border)]">
       {/* Brand & Identity Section */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div className="p-4 border-b border-[var(--theme-border)] flex items-center justify-between">
         <div>
           <h1 className="font-bold text-lg text-indigo-400">NexusRTC ☸️</h1>
-          <p className="text-xs text-slate-400 truncate">👤 {currentUsername}</p>
+          <p className="text-xs text-[var(--theme-text-muted)] truncate">👤 {currentUsername}</p>
         </div>
       </div>
 
       {/* Channels List Layout */}
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
         <div>
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 px-2">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] mb-2 px-2">
             <span>Text Channels</span>
             <button 
               onClick={() => setIsCreating(!isCreating)}
@@ -69,28 +85,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Dynamic Creation Form Box */}
           {isCreating && (
-            <form onSubmit={handleSubmit} className="mb-4 p-2 bg-slate-800 rounded-md">
+            <form onSubmit={handleSubmit} className="mb-4 p-2 bg-[var(--theme-form-bg)] rounded-md transition-all">
               <input
                 type="text"
                 value={newChannelName}
                 onChange={(e) => setNewChannelName(e.target.value)}
                 placeholder="e.g. general"
                 maxLength={50}
-                className="w-full text-sm bg-slate-950 text-slate-100 p-2 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full text-sm bg-[var(--theme-bg)] text-[var(--theme-text)] p-2 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 autoFocus
               />
-              {formError && <p className="text-rose-400 text-xs mt-1 px-1">{formError}</p>}
+              {formError && <p className="text-[var(--theme-error-text)] text-xs mt-1 px-1 font-medium">{formError}</p>}
               <div className="flex justify-end space-y-0 space-x-2 mt-2">
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1"
+                  className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text)] px-2 py-1"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded font-medium transition-colors"
+                  className="text-xs bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover)] text-[var(--theme-btn-text)] px-2 py-1 rounded font-medium transition-colors duration-150"
                 >
                   Create
                 </button>
@@ -101,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Rooms Iteration View */}
           <div className="space-y-1">
             {channels.length === 0 ? (
-              <p className="text-xs text-slate-500 italic px-2">No active channels found.</p>
+              <p className="text-xs text-[var(--theme-text-muted)] italic px-2">No active channels found.</p>
             ) : (
               channels.map((channel) => {
                 const isActive = activeChannel?.id === channel.id;
@@ -113,18 +129,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => onSelectChannel(channel)}
                       className={`w-full flex items-center justify-between text-sm px-3 py-2 rounded-md text-left transition-all ${
                         isActive 
-                          ? 'bg-indigo-600/90 text-white font-medium shadow-sm shadow-indigo-600/20' 
-                          : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                          ? 'bg-[var(--theme-channel-active-bg)] text-[var(--theme-channel-active-text)] font-medium shadow-sm' 
+                          : 'text-[var(--theme-text-muted)] hover:bg-[var(--theme-item-hover)] hover:text-[var(--theme-text)]'
                       }`}
                     >
                       <div className="flex items-center space-x-2 truncate pr-6">
-                        <span className="text-slate-500 font-mono">#</span>
+                        <span className="text-[var(--theme-text-muted)] font-mono">#</span>
                         <span className="truncate">{channel.name}</span>
                       </div>
 
                       {/* Dynamic Access Indicator Badges */}
                       {!hasJoined && (
-                        <span className="text-[10px] bg-slate-800 text-slate-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300 px-1.5 py-0.5 rounded font-medium">Join</span>
+                        <span className="text-[10px] bg-[var(--theme-badge-bg)] text-[var(--theme-text-muted)] group-hover:bg-[var(--theme-badge-hover-bg)] group-hover:text-[var(--theme-badge-hover-text)] px-1.5 py-0.5 rounded font-medium transition-colors duration-150">Join</span>
                       )}
                     </button>
 
@@ -135,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           e.stopPropagation(); // Avoid triggering route focus selection triggers
                           if (confirm(`Delete channel #${channel.name}?`)) onDeleteChannel(channel.id);
                         }}
-                        className="absolute right-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 transition-all p-1 text-xs"
+                        className="absolute right-2 opacity-0 group-hover:opacity-100 text-[var(--theme-text-muted)] hover:text-[var(--theme-trash-hover)] transition-all p-1 text-xs"
                         title="Delete Channel"
                       >
                         🗑️
@@ -149,10 +165,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* System Status Footnote */}
-      <div className="p-3 bg-slate-950/40 border-t border-slate-800/60 text-[10px] text-slate-500 flex items-center space-x-2">
-        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span className="font-mono">Cluster Sync: Online</span>
+      {/* System Status Footnote Panel with Accessible Theme Toggle Switcher */}
+      <div className="p-3 bg-[var(--theme-bg-alpha)] border-t border-[var(--theme-border)] text-[10px] text-[var(--theme-text-muted)] flex items-center justify-between w-full transition-colors duration-200">
+        <div className="flex items-center space-x-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="font-mono">Cluster Sync: Online</span>
+        </div>
+
+        {/* 🚀 ARIA-COMPLIANT ACCESSIBLE THEME TOGGLE BUTTON */}
+        <button
+          onClick={() => setIsLight(!isLight)}
+          aria-label={`Switch to ${isLight ? 'Dark' : 'Light'} Mode`}
+          title={`Switch to ${isLight ? 'Dark' : 'Light'} Mode`}
+          className="ml-2 px-2 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide uppercase transition-all bg-[var(--theme-bg)] border border-[var(--theme-border)] hover:border-indigo-500/50 text-[var(--theme-text-muted)] hover:text-indigo-400 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        >
+          {isLight ? '🌙 Dark' : '☀️ Light'}
+        </button>
       </div>
     </div>
   );

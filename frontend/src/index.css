@@ -9,17 +9,17 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #0b1329 !important;
+  background: var(--theme-scrollbar-track) !important;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.25) !important;
+  background: var(--theme-scrollbar-thumb) !important;
   border-radius: 4px !important;
 }
 
 /* Micro-precise hover: Triggers ONLY when directly over the thumb handle */
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.45) !important;
+  background: var(--theme-scrollbar-hover) !important;
 }
 
 
@@ -32,6 +32,82 @@
   .scrollbar-thin {
     scrollbar-width: thin !important;
     /* Static styling alignment matching base UI configuration */
-    scrollbar-color: rgba(99, 102, 241, 0.25) #0b1329 !important;
+    scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-scrollbar-track) !important;
   }
+}
+
+/* ==========================================================================
+   3. TAILWIND v4 MULTI-THEME ROOT ENGINE (COLORS MATRIX SYNCED)
+   ========================================================================== */
+@layer components {
+  :root {
+    color-scheme: dark !important;
+    --theme-bg: var(--color-slate-950);                                   /* Deep Base Canvas */
+    --theme-card: var(--color-slate-900);                                 /* Primary Containers */
+    --theme-border: var(--color-slate-800);                               /* Boundary Insets */
+    --theme-text: var(--color-slate-200);                                 /* High-Contrast Light Accent Labels */
+    --theme-text-muted: var(--color-slate-500);                           /* Muted Soft Gray Sub-text Typography */
+    --theme-text-contrast: var(--color-slate-300);                        /* Hardened text protection for notifications */
+    --theme-card-alpha: --alpha(var(--color-slate-900) / 40%);
+    --theme-bg-alpha: --alpha(var(--color-slate-950) / 40%);
+    
+    /* Interactive Element Colors */
+    --theme-btn-text: var(--color-white);                                 /* Clear White text for dark mode buttons */
+
+    --theme-btn-disabled-bg: var(--color-slate-800);
+    --theme-btn-disabled-text: var(--color-slate-600);
+
+    /* Interactive Link Colors */
+    --theme-link: var(--color-indigo-400);                                /* Bright for high-contrast dark backgrounds */
+    --theme-link-hover: var(--color-indigo-300);                          /* Hover tracking */
+
+    --theme-timeline-bg-alpha: --alpha(var(--color-slate-950) / 20%);
+    --theme-msg-sender: var(--color-slate-500);
+    --theme-peer-msg-text: var(--color-slate-200);
+    --theme-attachment-bg-alpha: --alpha(var(--color-slate-950) / 40%);
+    
+    /* Scrollbar Multi-Theme Tokens */
+    --theme-scrollbar-track: var(--color-slate-900);
+    --theme-scrollbar-thumb: --alpha(var(--color-indigo-500) / 25%);
+    --theme-scrollbar-hover: --alpha(var(--color-indigo-500) / 45%);
+  }
+
+  .light-mode {
+    color-scheme: light !important;
+    --theme-bg: var(--color-slate-50);                                    /* Soft Clean Background */
+    --theme-card: var(--color-white);                                     /* Pure Crisp White Content Paneling */
+    --theme-border: var(--color-slate-200);                               /* Clear Structural Lines */
+    --theme-text: var(--color-slate-900);                                 /* Dark Text Readability */
+    --theme-text-muted: var(--color-slate-500);                           /* Polished Captions */
+    --theme-text-contrast: var(--color-slate-800);                        /* Rich for high-visibility text */
+    --theme-card-alpha: --alpha(var(--color-white) / 0.6);
+    --theme-bg-alpha: --alpha(var(--color-slate-50) / 0.6);
+    
+    /* Interactive Element Colors */
+    --theme-btn-text: var(--color-white);                                 /* Keeps text crisp white over Indigo buttons! */
+
+    --theme-btn-disabled-bg: var(--color-slate-300);                      /* Clean soft grey */
+    --theme-btn-disabled-text: var(--color-slate-400);                    /* Muted grey text */
+
+    /* Interactive Link Colors (Light Mode Mapped) */
+    --theme-link: var(--color-indigo-500);                                /* Bright for high-contrast dark backgrounds */
+    --theme-link-hover: var(--color-indigo-400);                          /* Kover tracking */
+
+    --theme-timeline-bg-alpha: --alpha(var(--color-slate-100) / 0.3);     /* Soft background well shimmer */
+    --theme-msg-sender: var(--color-slate-500);                           /* Maintains subtle sender labels */
+    --theme-peer-msg-text: var(--color-slate-900);                        /* Dark readable text for incoming messages */
+    --theme-attachment-bg-alpha: var(--color-slate-100);                  /* Solid clean nested well for attachments */
+    
+    /* Scrollbar Multi-Theme Tokens (Light Mode Mapped) */
+    --theme-scrollbar-track: var(--color-slate-100);
+    --theme-scrollbar-thumb: --alpha(var(--color-indigo-500) / 0.2);
+    --theme-scrollbar-hover: --alpha(var(--color-indigo-500) / 0.5);
+  }
+}
+
+/* Dynamic Variable Mapping Anchor and Transitions */
+body {
+  background-color: var(--theme-bg) !important;
+  color: var(--theme-text) !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

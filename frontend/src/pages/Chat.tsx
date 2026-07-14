@@ -34,7 +34,7 @@ const Chat = () => {
     }, [startCall]);
 
     return (
-        <div className="relative h-screen w-screen bg-slate-950 text-white overflow-hidden">
+        <div className="relative h-screen w-screen bg-[var(--theme-bg)] text-white overflow-hidden">
             {isCalling && (
                 <VideoCall
                     localStream={localStream}
