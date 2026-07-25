@@ -100,12 +100,12 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 8080  # Verifies the port socket is open & listening
-          initialDelaySeconds: 45
+          initialDelaySeconds: 95
           periodSeconds: 15
         readinessProbe:
           tcpSocket:
             port: 8080 # Verifies the port socket is open & listening
-          initialDelaySeconds: 35
+          initialDelaySeconds: 85
           periodSeconds: 15
 
         resources:

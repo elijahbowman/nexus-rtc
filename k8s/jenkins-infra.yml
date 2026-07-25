@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-home-pv
+  labels:
+    app: rtc-project
+    component: cicd
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain # CRITICAL: Prevents K8s from wiping files if the PVC is deleted!
+  storageClassName: manual-storage
+  hostPath:
+    path: /data/jenkins-permanent-home # STABLE NODE LOCATION: Locked safely on the machine filesystem
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-home-pvc
+  labels:
+    app: rtc-project
+    component: cicd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual-storage # PAIRS WITH THE PV ABOVE: Bypasses the ephemeral dynamic provisioner
+  resources:
+    requests:
+      storage: 5Gi  # Ample space to cache local Maven dependencies (.m2) and npm modules
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-admin-sa
+  namespace: default
+  labels:
+    app: rtc-project
+    component: cicd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-admin-rbac
+  labels:
+    app: rtc-project
+    component: cicd
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-admin-sa
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin # Grants the pipeline cluster-wide permission to manage deployments
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtc-jenkins-server
+  labels:
+    app: rtc-project
+    component: cicd
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      component: jenkins-controller
+  template:
+    metadata:
+      labels:
+        component: jenkins-controller
+    spec:
+      serviceAccountName: jenkins-admin-sa
+      containers:
+        - name: jenkins
+          image: jenkins/jenkins:lts-jdk17
+          imagePullPolicy: IfNotPresent
+          # SECURITY ELEVATION: Grants container runtime root permissions to execute local tools
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          ports:
+            - containerPort: 8080
+              name: web-port
+            - containerPort: 50000
+              name: agent-port
+          env:
+            - name: JAVA_OPTS
+              value: "-Djenkins.install.runSetupWizard=true"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Configuring cluster environment directory exception rules..."
+              # Directs Git to bypass security checks within multi-user mount spaces
+              git config --global --add safe.directory '*'
+              
+              echo "Installing core pipeline execution requirements..."
+              apt-get update && apt-get install -y libatomic1 docker.io
+              
+              echo "Downloading and installing native cluster kubectl binaries..."
+              curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
+              chmod +x /usr/local/bin/kubectl
+              
+              echo "Environment verification check:"
+              kubectl version --client
+              
+              echo "Initialization complete. Initializing Jenkins daemon..."
+              
+              echo "Environment provisioning completed successfully! Booting Jenkins master daemon..."
+              exec /usr/local/bin/jenkins.sh
+          volumeMounts:
+            - name: jenkins-home-volume
+              mountPath: /var/jenkins_home
+            # DOCKER SOCKET BINDING: Links the container directly to the cluster container engine
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: jenkins-home-volume
+          persistentVolumeClaim:
+            claimName: jenkins-home-pvc
+        # PHYSICAL SOCKET ALLOCATION: Sources the MinIO/Docker daemon from the underlying cluster node
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtc-jenkins-service
+  labels:
+    app: rtc-project
+    component: cicd
+spec:
+  ports:
+    - port: 8888
+      targetPort: 8080
+      name: http
+    - port: 50000
+      targetPort: 50000
+      name: agent
+  selector:
+    component: jenkins-controller
+  type: ClusterIP
