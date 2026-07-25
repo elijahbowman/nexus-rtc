@@ -20,6 +20,7 @@ spec:
       containers:
       - name: redis
         image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
           name: redis-port
@@ -42,6 +43,7 @@ spec:
   ports:
   - port: 6379
     targetPort: 6379
+    name: redis
   selector:
     app: rtc-portfolio
     component: redis

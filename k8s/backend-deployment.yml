@@ -22,24 +22,92 @@ spec:
         app: rtc-portfolio
         component: backend
     spec:
+      # InitContainer prevents application pods from crashing if the database is still initializing
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for postgres-db-service to listen on port 5432...";
+              until nc -z -w 2 postgres-db-service 5432; do sleep 2; done;
+              echo "Database layer detected! Booting application microservice...";
       containers:
       - name: backend
-        image: realtime-communication-backend:latest
+        # Image tags are mapped to local registry names compiled during the Jenkins pipeline process
+        image: rtc-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
-          name: http-port
+          name: api-port
         env:
-        - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://postgres-db-service:5432/realtime_communication_db"
-        - name: SPRING_DATASOURCE_USERNAME
-          value: "dev"
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: "password"
-        - name: SPRING_DATA_REDIS_HOST
-          value: "rtc-redis-service"
-        - name: SPRING_DATA_REDIS_PORT
-          value: "6379"
+          # Centralized Configuration Injection
+          - name: SPRING_DATASOURCE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: SPRING_DATASOURCE_URL
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: POSTGRES_USER
+          - name: SPRING_DATA_REDIS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: SPRING_DATA_REDIS_HOST
+          - name: SPRING_DATA_REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: SPRING_DATA_REDIS_PORT
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: AWS_ACCESS_KEY_ID
+          - name: MINIO_URL
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: MINIO_URL
+          - name: MINIO_BUCKET_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: MINIO_BUCKET_NAME
+          
+          # Secure Base64 Encrypted Secret Injection
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: rtc-app-secrets
+                key: postgres-password
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: rtc-app-secrets
+                key: minio-root-password
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: rtc-app-secrets
+                key: jwt-secret
+
+        # Proactive health tracking keeps faulty nodes out of routing pools
+        livenessProbe:
+          tcpSocket:
+            port: 8080  # Verifies the port socket is open & listening
+          initialDelaySeconds: 45
+          periodSeconds: 15
+        readinessProbe:
+          tcpSocket:
+            port: 8080 # Verifies the port socket is open & listening
+          initialDelaySeconds: 35
+          periodSeconds: 15
+
         resources:
           limits:
             cpu: "1000m"
@@ -47,6 +115,12 @@ spec:
           requests:
             cpu: "500m"
             memory: "512Mi"
+
+      hostAliases:
+        # - ip: "10.104.71.86"
+        - ip: "10.101.60.142" # ingress-nginx-controller CLUSTER-IP retrieved by running `kubectl get svc -n ingress-nginx ingress-nginx-controller`
+          hostnames:
+            - "storage.nexus-rtc.local"
 ---
 apiVersion: v1
 kind: Service
@@ -63,4 +137,5 @@ spec:
   selector:
     app: rtc-portfolio
     component: backend
+  # ClusterIP keeps services shielded inside the internal core network mesh
   type: ClusterIP

@@ -65,6 +65,22 @@
     --theme-msg-sender: var(--color-slate-500);
     --theme-peer-msg-text: var(--color-slate-200);
     --theme-attachment-bg-alpha: --alpha(var(--color-slate-950) / 40%);
+
+    /* Interactive Sidebar Room List Token Overlays */
+    --theme-item-hover: --alpha(var(--color-slate-800) / 60%);            /* Translucent row overlay hover fill */
+    --theme-badge-bg: var(--color-slate-800);                             /* Inset container badge base */
+    --theme-badge-hover-bg: --alpha(var(--color-indigo-500) / 20%);       /* Indigo indicator splash on hover */
+    --theme-badge-hover-text: var(--color-indigo-300);                    /* Muted active indicator text */
+    
+    --theme-channel-active-bg: --alpha(var(--color-indigo-600) / 90%);    /* Deep solid active container focus */
+    --theme-channel-active-text: var(--color-white);                      /* Crisp white text for deep focus backgrounds */
+    --theme-trash-hover: var(--color-rose-400);                           /* Clear warning tone indicator */
+
+    /* Dynamic Form Validation Error & Element Background Tokens */
+    --theme-form-bg: var(--color-slate-900);                              /* Deep dark container card fill */
+    --theme-error-text: var(--color-rose-400);                            /* High-visibility vibrant red alert token */
+    --theme-btn-primary-bg: var(--color-indigo-600);                      /* Solid button backdrop */
+    --theme-btn-primary-hover: var(--color-indigo-500);                   /* Interactive highlight step */
     
     /* Scrollbar Multi-Theme Tokens */
     --theme-scrollbar-track: var(--color-slate-900);
@@ -89,7 +105,7 @@
     --theme-btn-disabled-bg: var(--color-slate-300);                      /* Clean soft grey */
     --theme-btn-disabled-text: var(--color-slate-400);                    /* Muted grey text */
 
-    /* Interactive Link Colors (Light Mode Mapped) */
+    /* Interactive Link Colors */
     --theme-link: var(--color-indigo-500);                                /* Bright for high-contrast dark backgrounds */
     --theme-link-hover: var(--color-indigo-400);                          /* Kover tracking */
 
@@ -97,6 +113,22 @@
     --theme-msg-sender: var(--color-slate-500);                           /* Maintains subtle sender labels */
     --theme-peer-msg-text: var(--color-slate-900);                        /* Dark readable text for incoming messages */
     --theme-attachment-bg-alpha: var(--color-slate-100);                  /* Solid clean nested well for attachments */
+
+    /* Interactive Sidebar Room List Token Overlays */
+    --theme-item-hover: --alpha(var(--color-slate-200) / 70%);            /* Crisp clean row overlay hover fill */
+    --theme-badge-bg: var(--color-slate-100);                             /* Polished crisp background accent badge */
+    --theme-badge-hover-bg: --alpha(var(--color-indigo-300) / 100%);                      /* Solid high-visibility indicator fill on hover */
+    --theme-badge-hover-text: var(--color-white);                         /* Maximum contrast access label readout */
+    
+    --theme-channel-active-bg: var(--color-indigo-600);                   /* Solid focus color block */
+    --theme-channel-active-text: var(--color-white);                      /* Highly readable high-contrast label */
+    --theme-trash-hover: var(--color-rose-600);                           /* Deeper rose contrast layer for high-visibility light-mode lines */
+
+    /* Dynamic Form Validation Error & Element Background Tokens */
+    --theme-form-bg: var(--color-slate-100);                              /* Polished, crisp light grey container card fill */
+    --theme-error-text: var(--color-rose-600);                            /* Deep, high-contrast dark red alert token */
+    --theme-btn-primary-bg: var(--color-indigo-600);                      /* Solid button backdrop remains consistent */
+    --theme-btn-primary-hover: var(--color-indigo-700);                   /* Darkens cleanly for crisp light accessibility checks */
     
     /* Scrollbar Multi-Theme Tokens (Light Mode Mapped) */
     --theme-scrollbar-track: var(--color-slate-100);

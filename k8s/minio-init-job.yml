@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-bucket-init
+  labels:
+    app: rtc-project
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: minio-bucket-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: minio-mc
+          image: minio/mc:RELEASE.2025-08-13T08-35-41Z-cpuv1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for MinIO service initialization via native client commands..."
+              
+              # 🚀 SAFE NATIVE PING LOOP: Reads variables seamlessly across both ConfigMap and Secret boundaries
+              until mc alias set cluster http://minio-service:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" > /dev/null 2>&1; do
+                echo "MinIO node offline. Retrying socket handshake loop..."
+                sleep 2
+              done
+              
+              echo "Connected to storage instance node safely!"
+
+              # Generate the target bucket if missing and set its policy to public read-access
+              if ! mc ls cluster/nexus-rtc-attachments > /dev/null 2>&1; then
+                echo "Creating required portfolio attachments bucket..."
+                mc mb cluster/nexus-rtc-attachments
+                mc policy set download cluster/nexus-rtc-attachments
+                echo "Bucket initialized successfully with public download policies."
+              else
+                echo "Bucket already initialized. Skipping configuration sweeps."
+              fi
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: rtc-app-config
+                  key: AWS_ACCESS_KEY_ID
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rtc-app-secrets
+                  key: minio-root-password

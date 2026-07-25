@@ -7,6 +7,9 @@ metadata:
     component: database
 spec:
   replicas: 1
+  # Strategy Recreate prevents multi-pod volume locking collision anomalies
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: rtc-portfolio
@@ -20,16 +23,32 @@ spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
           name: db-port
         env:
-        - name: POSTGRES_DB
-          value: "realtime_communication_db"
-        - name: POSTGRES_USER
-          value: "dev"
-        - name: POSTGRES_PASSWORD
-          value: "password"
+          # Pull public non-sensitive attributes out of the global ConfigMap
+          - name: POSTGRES_DB
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: POSTGRES_DB
+          - name: POSTGRES_USER
+            valueFrom:
+              configMapKeyRef:
+                name: rtc-app-config
+                key: POSTGRES_USER
+          # Pull highly confidential keys cleanly from Opaque Secret wrapper
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: rtc-app-secrets
+                key: postgres-password
+        volumeMounts:
+          # Mount the physical data directory path straight inside the box
+          - name: postgres-storage
+            mountPath: /var/lib/postgresql/data
         resources:
           limits:
             cpu: "500m"
@@ -37,6 +56,11 @@ spec:
           requests:
             cpu: "250m"
             memory: "256Mi"
+      volumes:
+            # Bind the storage box hook onto cluster PVC manifest asset
+            - name: postgres-storage
+              persistentVolumeClaim:
+                claimName: postgres-pvc
 ---
 apiVersion: v1
 kind: Service

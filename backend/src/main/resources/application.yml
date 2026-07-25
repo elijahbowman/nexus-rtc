@@ -43,3 +43,9 @@ logging:
   level:
     org.springframework.web.socket: DEBUG
     org.springframework.messaging: DEBUG
+    com.portfolio.realtimecommunication: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.org.hibernate.jpa: DEBUG
+    org.springframework.jdbc.datasource: DEBUG
+    org.springframework.web.cors: TRACE
+    org.springframework.security: DEBUG

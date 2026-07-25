@@ -43,7 +43,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost"); // Match React URLs
+                .setAllowedOrigins(
+                        "http://localhost",
+                        "http://nexus-rtc.local"
+                ); // Match React URLs
     }
 
     @Override

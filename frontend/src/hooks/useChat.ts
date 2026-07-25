@@ -80,12 +80,12 @@ export const useChat = () => {
         const peerConnection = new RTCPeerConnection({
             iceServers: [
                 {
-                    urls: 'stun:stun.l.google.com:19302'
+                    urls: import.meta.env.VITE_STUN_SERVER_URL || 'stun:stun.l.google.com:19302'
                 },
                 {
-                    urls: 'turn:localhost:3478',
-                    username: 'devuser',
-                    credential: 'devpassword'
+                    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
+                    username: import.meta.env.VITE_TURN_USERNAME || 'devuser',
+                    credential: import.meta.env.VITE_TURN_SECRET || 'devpassword'
                 }
             ]
         });
@@ -319,11 +319,13 @@ export const useChat = () => {
 
                         const peerConnection = new RTCPeerConnection({
                             iceServers: [
-                                { urls: 'stun:stun.l.google.com:19302' },
                                 {
-                                    urls: 'turn:localhost:3478',
-                                    username: 'devuser',
-                                    credential: 'devpassword'
+                                    urls: import.meta.env.VITE_STUN_SERVER_URL || 'stun:stun.l.google.com:19302'
+                                },
+                                {
+                                    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
+                                    username: import.meta.env.VITE_TURN_USERNAME || 'devuser',
+                                    credential: import.meta.env.VITE_TURN_SECRET || 'devpassword'
                                 }
                             ]
                         });
