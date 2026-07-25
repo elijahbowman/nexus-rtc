@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Client } from '@stomp/stompjs';
 import { Sidebar } from './Sidebar';
 import { useChannels } from '../hooks/useChannels';
+import { useChat } from '../hooks/useChat';
 import { type Channel, channelService, type ChatMessagePayload } from '../services/channelService'; // Clean, unified imports
 import api from '../api/axios';
 
@@ -32,8 +32,13 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     removeChannel
   } = useChannels(userId);
 
-  const stompClientRef = useRef<Client | null>(null);
+  const { connected: globalConnected, stompClientRef } = useChat();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync internal connection state layout smoothly with the global network boundary
+  useEffect(() => {
+    setConnected(globalConnected);
+  }, [globalConnected]);
 
   // Scroll message board smoothly on new arrivals
   useEffect(() => {
@@ -47,63 +52,37 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     let isMounted = true;
     setMessages([]); // Reset message board view state when navigating into a new room space
 
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
-    const token = localStorage.getItem('token');
-    const client = new Client({
-      brokerURL: WS_URL,
-      connectHeaders: {
-        Authorization: `Bearer ${token}`
-      },
-      reconnectDelay: 5000,
-      debug: (str) => {
-        // Only log protocol noise if running in local developer mode
-        if (import.meta.env.NODE_ENV === 'development') {
-          console.log(`[STOMP-PROTOCOL] ${str}`);
-        }
-      },
-    });
+    // Tracker reference context to drop the room subscription dynamically when switching
+    let activeSubscription: any = null;
 
-    // Step A: Execute asynchronous historical extraction out of PostgreSQL
-    const loadRoomHistoryAndConnect = async () => {
-      // PROTECTION GUARD: Abort instantly if no channel is selected yet!
-      if (!activeChannel || !activeChannel.id) {
-        console.log("[CHANNELS-GATE] No channel selected on boot. Standing by in placeholder state.");
-        return;
-      }
+    const syncRoomConnection = async () => {
+      if (!activeChannel || !activeChannel.id) return;
 
       try {
         console.log(`Extracting chat logs for channel ID: ${activeChannel.id}`);
-        const historyData: ChatMessagePayload[] = await channelService.getChannelHistory(activeChannel.id, userId);
-
+        const historyData = await channelService.getChannelHistory(activeChannel.id, userId);
         if (isMounted) {
-          // ✅ Optimized: Direct assignment with zero mapping conversion runtime overhead!
           setMessages(historyData);
         }
       } catch (err) {
         console.error('Failed to pre-load channel messaging history arrays:', err);
       }
 
-      // Step B: Once records populate your UI view state, open the live network bridge tunnel
       if (!isMounted) return;
 
-      client.onConnect = () => {
-        if (!isMounted) {
-          client.deactivate();
-          return;
-        }
-        setConnected(true);
-        console.log(`STOMP node synchronized securely. Subscribing to channel path: ${activeChannel.id}`);
+      // CONSOLIDATED STREAMING LINK: Uses the global single connection socket seamlessly!
+      const stompClient = stompClientRef.current;
+      if (stompClient && stompClient.connected) {
+        console.log(`[WS-ALIGN] Global socket active. Hot-swapping subscription to room path: ${activeChannel.id}`);
 
-        // Subscribe to the channel-isolated message pipeline we built in the ChatController
-        client.subscribe(`/topic/channels/${activeChannel.id}`, (frame) => {
+        activeSubscription = stompClient.subscribe(`/topic/channels/${activeChannel.id}`, (frame) => {
           const payload: ChatMessagePayload = JSON.parse(frame.body);
           if (isMounted) {
             setMessages((prev) => [...prev, payload]);
           }
         });
 
-        // Signal arrival context frame into the channel space network loop
-        client.publish({
+        stompClient.publish({
           destination: `/app/chat.addUser/${activeChannel.id}`,
           body: JSON.stringify({
             channelId: activeChannel.id,
@@ -112,27 +91,25 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
             type: 'JOIN',
           }),
         });
-      };
-
-      client.onDisconnect = () => {
-        if (isMounted) setConnected(false);
-      };
-
-      client.activate();
-      stompClientRef.current = client;
-    };
-
-    // Trigger the unified loading pipeline execution loop
-    loadRoomHistoryAndConnect();
-
-    // Clean up hook: Tears down active tunnel subscriptions before mapping user into next room selection
-    return () => {
-      isMounted = false;
-      if (client.active) {
-        client.deactivate();
+      } else {
+        console.log("[WS-GUARD] ⏳ Global socket not ready yet. Retrying subscription loop on connection sync...");
       }
     };
-  }, [activeChannel, username, userId]);
+
+    // Trigger the loading and subscription hot-swap
+    if (globalConnected) {
+      syncRoomConnection();
+    }
+
+    // Clean up hook: Drops the specific room subscription lane BEFORE entering next sidebar selection
+    return () => {
+      isMounted = false;
+      if (activeSubscription) {
+        console.log(`[WS-ALIGN] 🧼 Safely unsubscribing from channel target path: ${activeChannel.id}`);
+        activeSubscription.unsubscribe();
+      }
+    };
+  }, [activeChannel, username, userId, stompClientRef, globalConnected]);
 
   // 🚀 INTERCEPT BACKGROUND EVENT BROADCASTS CHANNELS
   useEffect(() => {
@@ -334,11 +311,10 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
                 <span className="text-[10px] text-[var(--theme-msg-sender)] font-medium px-1 mb-0.5">{msg.sender}</span>
 
                 {/* Explicit width control blocks horizontal textBox leaks */}
-                <div className={`w-auto max-w-[85%] md:max-w-md px-4 py-2.5 rounded-2xl text-sm shadow-md break-all flex flex-col space-y-1.5 ${
-                  isMe 
-                    ? 'bg-indigo-600 text-white rounded-tr-none' 
-                    : 'bg-[var(--theme-card)] text-[var(--theme-text)] rounded-tl-none border border-[var(--theme-border)]/80'
-                }`}>
+                <div className={`w-auto max-w-[85%] md:max-w-md px-4 py-2.5 rounded-2xl text-sm shadow-md break-all flex flex-col space-y-1.5 ${isMe
+                  ? 'bg-indigo-600 text-white rounded-tr-none'
+                  : 'bg-[var(--theme-card)] text-[var(--theme-text)] rounded-tl-none border border-[var(--theme-border)]/80'
+                  }`}>
                   <span>{msg.content}</span>
 
                   {/* MULTIMEDIA ATTACHMENT PREVIEW COMPONENT */}
@@ -357,8 +333,8 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
                           target="_blank"
                           rel="noopener noreferrer"
                           className={`flex items-center space-x-2 text-xs font-mono p-1 break-all max-w-full transition-colors duration-150 ${isMe
-                              ? 'text-(--theme-link) hover:text-(--theme-link-hover)'
-                              : 'text-(--theme-link) hover:text-(--theme-link-hover)'
+                            ? 'text-(--theme-link) hover:text-(--theme-link-hover)'
+                            : 'text-(--theme-link) hover:text-(--theme-link-hover)'
                             }`}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>

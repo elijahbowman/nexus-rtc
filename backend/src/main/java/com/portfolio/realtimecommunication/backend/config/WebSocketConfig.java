@@ -3,6 +3,7 @@ package com.portfolio.realtimecommunication.backend.config;
 import com.portfolio.realtimecommunication.backend.security.JwtUtils;
 import com.portfolio.realtimecommunication.backend.service.UserDetailsServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -52,13 +53,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
+            @NotNull
             @Override
-            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+            public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String authHeader = accessor.getFirstNativeHeader("Authorization");
-                    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    if (authHeader.startsWith("Bearer ")) {
                         String token = authHeader.substring(7);
                         if (jwtUtils.validateJwtToken(token)) {
                             String username = jwtUtils.getUserNameFromJwtToken(token);

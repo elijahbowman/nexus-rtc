@@ -28,6 +28,9 @@ export const useChat = () => {
     const localStreamRef = useRef<MediaStream | null>(null);
     const remoteStreamRef = useRef<MediaStream | null>(null);
 
+    const [connected, setConnected] = useState(false);
+    const currentSubscriptionRef = useRef<any>(null);
+
     const sendMessage = useCallback((content: string) => {
         const stompClient = stompClientRef.current;
         if (stompClient && stompClient.connected) {
@@ -265,15 +268,66 @@ export const useChat = () => {
         }
     }, [localStream, isVideoOff, isScreenSharing, stopScreenShare])
 
+    // 🚀 THE CRITICAL ARCHITECTURE FIX: Direct channel room hot-swapping helper method
+    const joinChannelRoom = useCallback((channelId: string, username: string) => {
+        if (!stompClientRef.current || !connected) {
+            console.warn("[WS-HUB] Cannot subscribe: STOMP engine is not initialized yet.");
+            return;
+        }
+
+        // A. Clean up any pre-existing room subscription channel immediately before moving paths
+        if (currentSubscriptionRef.current) {
+            console.log(`[WS-HUB] 🧼 Unsubscribing from historical channel path gracefully...`);
+            currentSubscriptionRef.current.unsubscribe();
+            currentSubscriptionRef.current = null;
+        }
+
+        // B. Clear out the messaging canvas view state for the fresh room entry
+        setMessages([]);
+
+        // C. Establish the authentic new target cluster room subscription lane
+        console.log(`[WS-HUB] Synchronizing new cluster target lane: /topic/channels/${channelId}`);
+        const sub = stompClientRef.current.subscribe(`/topic/channels/${channelId}`, (frame) => {
+            const payload = JSON.parse(frame.body);
+            setMessages((prev) => [...prev, payload]);
+        });
+
+        currentSubscriptionRef.current = sub;
+
+        // D. Publish the clean user join notification frame out to the Redis cluster mesh
+        stompClientRef.current.publish({
+            destination: `/app/chat.addUser/${channelId}`,
+            body: JSON.stringify({
+                channelId: channelId,
+                sender: username,
+                content: '',
+                type: 'JOIN',
+            }),
+        });
+    }, [connected]);
+
     useEffect(() => {
+        if (!currentUser) return;
+        let isMounted = true;
+
         const token = localStorage.getItem('token');
 
         const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'; // Standard WebSocket URL (localhost:8080)
+
+        // const WS_URL = (import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws') + `?token=${token}`; // Standard WebSocket URL (localhost:8080)
+
+        console.log(`[APP-TELEMETRY] 🔌 Initiating secure, token-anchored WebSocket connection tunnel to: ${WS_URL}`);
 
         const client = new Client({
             brokerURL: WS_URL,
             connectHeaders: {
                 Authorization: `Bearer ${token}`
+            },
+            reconnectDelay: 5000,
+            heartbeatIncoming: 4000, // Send/receive keep-alive ping signals every 4 seconds
+            heartbeatOutgoing: 4000,
+            onWebSocketClose: () => {
+                console.warn("[WS-TELEMETRY] Real-time bridge connection terminated. Re-evaluating channel state...");
             },
             debug: (str) => {
                 // Only log protocol noise if running in local developer mode
@@ -281,10 +335,16 @@ export const useChat = () => {
                     console.log(`[STOMP-PROTOCOL] ${str}`);
                 }
             },
-            reconnectDelay: 5000,
             onConnect: () => {
+                if (!isMounted) {
+                    client.deactivate();
+                    return;
+                }
+                setConnected(true);
+                // console.log("[APP-TELEMETRY] ✅ Singular global application WebSocket tunnel successfully locked!");
+
                 console.log('[APP-TELEMETRY] 🔑 JWT Token verified via LocalStorage. Injecting Authorization Headers...');
-                console.log('[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ws://localhost:8080/ws');
+                console.log(`[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ${WS_URL}`);
                 console.log('[APP-TELEMETRY] ✅ STOMP connection successfully established with Principal Identity.');
                 console.log('[APP-TELEMETRY] 📡 Subscribed to global broadcast signaling hub: /topic/public');
                 client.subscribe('/topic/public', async (message) => {
@@ -450,13 +510,16 @@ export const useChat = () => {
         stompClientRef.current = client;
 
         return () => {
-            client.deactivate();
+            isMounted = false;
+            if (currentSubscriptionRef.current) currentSubscriptionRef.current.unsubscribe();
+            if (client.active) client.deactivate();
         };
         // }, [initializeLocalHardwareStream, sendSignalingMessage]);
     }, [currentUser]);
 
     return {
         messages,
+        setMessages,
         sendMessage,
         sendSignalingMessage,
         startCall,      // The function to trigger a call
@@ -471,6 +534,9 @@ export const useChat = () => {
         isVideoOff,
         isScreenSharing,
         toggleMic,
-        toggleVideo
+        toggleVideo,
+        connected,
+        joinChannelRoom,
+        stompClientRef
     };
 };
