@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: minio-bucket-init
   labels:
-    app: rtc-project
+    app: rtc-portfolio
 spec:
   template:
     metadata:

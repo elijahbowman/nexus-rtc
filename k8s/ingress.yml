@@ -28,6 +28,16 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+    - host: jenkins.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rtc-jenkins-service
+                port:
+                  number: 8888
     - host: nexus-rtc.localhost
       http:
         paths:

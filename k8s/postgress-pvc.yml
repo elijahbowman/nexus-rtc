@@ -3,12 +3,13 @@ kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
   labels:
-    app: rtc-project
+    app: rtc-portfolio
     tier: database
 spec:
   # ReadWriteOnce allows the volume to be mounted as read-write by a single cluster node
   accessModes:
     - ReadWriteOnce
+  storageClassName: postgres-manual-storage
   resources:
     requests:
       storage: 2Gi # Ample volume slice for development and testing inside Minikube

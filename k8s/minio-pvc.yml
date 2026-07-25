@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: minio-pvc
   labels:
-    app: rtc-project
+    app: rtc-portfolio
     tier: storage
 spec:
   accessModes:

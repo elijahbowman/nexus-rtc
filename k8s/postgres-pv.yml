@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-db-pv
+  labels:
+    app: rtc-portfolio
+    component: database
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain # CRITICAL: Tells K8s to freeze and protect files even if the PVC is deleted!
+  storageClassName: postgres-manual-storage
+  hostPath:
+    path: /data/postgres-permanent-storage # STABLE BACKEND PATH: Permanently locked onto the cluster VM node disk
+    type: DirectoryOrCreate

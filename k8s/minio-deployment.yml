@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: minio
   labels:
-    app: rtc-project
+    app: rtc-portfolio
     component: storage
 spec:
   replicas: 1
@@ -11,12 +11,12 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: rtc-project
+      app: rtc-portfolio
       component: storage
   template:
     metadata:
       labels:
-        app: rtc-project
+        app: rtc-portfolio
         component: storage
     spec:
       containers:
@@ -67,7 +67,7 @@ kind: Service
 metadata:
   name: minio-service
   labels:
-    app: rtc-project
+    app: rtc-portfolio
     component: storage
 spec:
   ports:
@@ -78,6 +78,6 @@ spec:
       targetPort: 9001
       name: web-console
   selector:
-    app: rtc-project
+    app: rtc-portfolio
     component: storage
   type: ClusterIP

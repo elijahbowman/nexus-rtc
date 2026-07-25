@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: rtc-app-config
   labels:
-    app: rtc-project
+    app: rtc-portfolio
 data:
   # Database Configuration
   POSTGRES_DB: "realtime_communication_db"
