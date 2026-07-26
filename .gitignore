@@ -1,1 +1,7 @@
 .DS_Store
+
+ignored/
+design-and-sprint-plan.md
+
+.vscode/chrome-profile-1
+.vscode/chrome-profile-2
