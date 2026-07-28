@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
@@ -16,7 +17,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     // Global pub/sub topic channel string matching our broadcast design
-    public static final String REDIS_SIGNALING_TOPIC = "nexus-rtc-signaling";
+    public static final String REDIS_RTC_COORDINATOR_TOPIC = "nexus-rtc-signaling";
+    public static final String REDIS_CHAT_CHANNEL_TOPIC_PREFIX = "app:channel:";
+    public static final String REDIS_NOTIFICATIONS_TOPIC = "app-system-notifications";
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -50,9 +53,16 @@ public class RedisConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
 
-        // Listen to the explicit cluster signaling channel topic
-        container.addMessageListener(listenerAdapter, new PatternTopic(REDIS_SIGNALING_TOPIC));
-        log.info("[REDIS-INFRA] Distributed Pub/Sub Listener Container attached to topic: {}", REDIS_SIGNALING_TOPIC);
+        // 1. Intercept the explicit static WebRTC video/audio calling and screensharing traffic
+        container.addMessageListener(listenerAdapter, new ChannelTopic(REDIS_RTC_COORDINATOR_TOPIC));
+
+        // 2. Intercept all text chat channel traffic across pods
+        container.addMessageListener(listenerAdapter, new PatternTopic(REDIS_CHAT_CHANNEL_TOPIC_PREFIX + "*"));
+
+        // 3. Bind cluster-wide notification channel topic context
+        container.addMessageListener(listenerAdapter, new ChannelTopic(REDIS_NOTIFICATIONS_TOPIC));
+
+        log.info("[REDIS-INFRA] Distributed Pub/Sub Listener Container mapped to topics");
         return container;
     }
 

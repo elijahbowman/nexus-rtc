@@ -1,5 +1,6 @@
 package com.portfolio.realtimecommunication.backend.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +29,25 @@ public class RedisMessageSubscriber implements MessageListener {
         try {
             log.info("[REDIS-SUBSCRIBER] Intercepted cross-node cluster event payload.");
 
-            // Re-broadcast the raw event string directly out to this node's local WebSocket /topic/public subscribers
-            messagingTemplate.convertAndSend("/topic/public", objectMapper.readTree(messageBody));
+            JsonNode jsonNode = objectMapper.readTree(messageBody);
 
+            // WebRTC Signaling Catch: Checks for data/receiver attributes to route calls
+            if (jsonNode.has("receiver") || jsonNode.has("data")) {
+                messagingTemplate.convertAndSend("/topic/public", jsonNode);
+            }
+            // Chat Channel Catch
+            else if (jsonNode.has("channelId")) {
+                Long channelId = jsonNode.get("channelId").asLong();
+                messagingTemplate.convertAndSend("/topic/channels/" + channelId, jsonNode);
+            }
+            // System Notification Catch
+            else if (jsonNode.has("recipientUsername") && jsonNode.has("chatMessagePayload")) {
+                String targetUser = jsonNode.get("recipientUsername").asText();
+                JsonNode messagePayload = jsonNode.get("chatMessagePayload");
+
+                log.info("[REDIS-SUBSCRIBER] Broadcasting local in-app alert down to websocket: {}", targetUser);
+                messagingTemplate.convertAndSend("/queue/notifications/" + targetUser, messagePayload);
+            }
         } catch (Exception e) {
             log.error("[REDIS-SUBSCRIBER] Critical failure routing distributed message packet: ", e);
         }

@@ -1,8 +1,5 @@
 import api from '../api/axios';
 
-// Resolve static development gateway proxy address matching your locked port
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
 // Define clear TypeScript interfaces to guarantee absolute type-safety across views
 export interface Channel {
   id: number;
@@ -33,7 +30,7 @@ export const channelService = {
 
   // 1. CREATE: Dispatches a room initialization payload to the backend data layer
   createChannel: async (request: ChannelCreationRequest): Promise<Channel> => {
-    const response = await api.post<Channel>(`${API_BASE_URL}/api/channels`, request);
+    const response = await api.post<Channel>(`/channels`, request);
     return response.data;
   },
 

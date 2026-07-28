@@ -51,6 +51,14 @@ export const useChat = () => {
     const initializeLocalHardwareStream = useCallback(async (): Promise<MediaStream> => {
         // 1. Get local media streams (audio, video)
         console.log("[APP-TELEMETRY] 🎙️ Requested local hardware media access via navigator.mediaDevices.getUserMedia...");
+
+        // High-Utility Security Check
+        if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+            throw new Error(
+                "SECURITY BLOCK: Browser has stripped 'navigator.mediaDevices' because the app is running over insecure HTTP/WS (*.local domains)."
+            );
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
         // 2. Disable each audio and video track
@@ -80,12 +88,12 @@ export const useChat = () => {
         const peerConnection = new RTCPeerConnection({
             iceServers: [
                 {
-                    urls: 'stun:stun.l.google.com:19302'
+                    urls: import.meta.env.VITE_STUN_SERVER_URL || 'stun:stun.l.google.com:19302'
                 },
                 {
-                    urls: 'turn:localhost:3478',
-                    username: 'devuser',
-                    credential: 'devpassword'
+                    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
+                    username: import.meta.env.VITE_TURN_USERNAME || 'devuser',
+                    credential: import.meta.env.VITE_TURN_SECRET || 'devpassword'
                 }
             ]
         });
@@ -203,11 +211,12 @@ export const useChat = () => {
         const stompClient = stompClientRef.current;
         if (stompClient && stompClient.connected) {
             stompClient.publish({
-                destination: "/topic/public",
+                destination: "/app/call.hangup",
                 body: JSON.stringify({
                     type: "HANGUP",
                     sender: currentUser, // Ensure your tracking variable passes the sender name
-                    data: { status: "ended" }
+                    receiver: "peer",
+                    data: JSON.stringify({ status: "ended" })
                 })
             });
         }
@@ -252,7 +261,7 @@ export const useChat = () => {
     }, [localStream, isMuted])
 
     const toggleVideo = useCallback(async () => {
-        // 🛡️ MUTUAL EXCLUSION: If actively screen-sharing, stop it first before activating the camera
+        // MUTUAL EXCLUSION: If actively screen-sharing, stop it first before activating the camera
         if (isScreenSharing) {
             console.log("[APP-TELEMETRY] 💻 Screen-share active. Executing automated shutdown loop prior to webcam takeover...");
             await stopScreenShare();
@@ -284,7 +293,7 @@ export const useChat = () => {
             reconnectDelay: 5000,
             onConnect: () => {
                 console.log('[APP-TELEMETRY] 🔑 JWT Token verified via LocalStorage. Injecting Authorization Headers...');
-                console.log('[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ws://localhost:8080/ws');
+                console.log(`[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ${WS_URL}`);
                 console.log('[APP-TELEMETRY] ✅ STOMP connection successfully established with Principal Identity.');
                 console.log('[APP-TELEMETRY] 📡 Subscribed to global broadcast signaling hub: /topic/public');
                 client.subscribe('/topic/public', async (message) => {
@@ -319,11 +328,13 @@ export const useChat = () => {
 
                         const peerConnection = new RTCPeerConnection({
                             iceServers: [
-                                { urls: 'stun:stun.l.google.com:19302' },
                                 {
-                                    urls: 'turn:localhost:3478',
-                                    username: 'devuser',
-                                    credential: 'devpassword'
+                                    urls: import.meta.env.VITE_STUN_SERVER_URL || 'stun:stun.l.google.com:19302'
+                                },
+                                {
+                                    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
+                                    username: import.meta.env.VITE_TURN_USERNAME || 'devuser',
+                                    credential: import.meta.env.VITE_TURN_SECRET || 'devpassword'
                                 }
                             ]
                         });

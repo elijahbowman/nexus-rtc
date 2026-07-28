@@ -197,10 +197,8 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
     try {
       setUploading(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
       // 1. Fire the file over a standard HTTP REST Multipart POST request directly into AttachmentController
-      const response = await api.post(`${API_URL}/api/attachments/upload`, formData, {
+      const response = await api.post(`/attachments/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }

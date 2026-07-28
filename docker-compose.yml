@@ -26,7 +26,7 @@ services:
       # Inject MinIO/S3 Environment Credentials to establish clean integration connections
       AWS_ACCESS_KEY_ID: devuser
       AWS_SECRET_ACCESS_KEY: devpassword
-      MINIO_URL: http://minio.local:9000
+      MINIO_URL: http://minio.localhost:9000
       MINIO_BUCKET_NAME: nexus-rtc-attachments
     depends_on:
       - postgres
@@ -83,7 +83,7 @@ services:
       default:
         # Bridges the internal Docker network layer cleanly
         aliases:
-          - minio.local # a custom local domain setup in /etc/hosts (MAC) that points to 127.0.0.1 so front and backend can use the same endpoint url for S3 Signature V4 cryptographic hash matching
+          - minio.localhost # a custom local domain setup in /etc/hosts (MAC) that points to 127.0.0.1 so front and backend can use the same endpoint url for S3 Signature V4 cryptographic hash matching
     command: server /data --console-address ":9001"
     restart: unless-stopped
 

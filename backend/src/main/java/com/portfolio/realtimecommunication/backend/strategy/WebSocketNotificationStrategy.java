@@ -1,8 +1,11 @@
 package com.portfolio.realtimecommunication.backend.strategy;
 
+import com.portfolio.realtimecommunication.backend.config.RedisConfig;
 import com.portfolio.realtimecommunication.backend.model.ChatMessage;
+import com.portfolio.realtimecommunication.backend.model.SystemNotificationWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Component;
 
@@ -11,14 +14,16 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class WebSocketNotificationStrategy implements NotificationStrategy {
 
-    private final SimpMessageSendingOperations messagingTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public void sendNotification(String recipientName, ChatMessage message) {
-        // 📡 Route to a private, user-isolated WebSocket queue path
-        String destination = "/queue/notifications/" + recipientName;
+        log.info("[REDIS-PRODUCER] Forwarding alert for {} to the Redis cluster.", recipientName);
 
-        log.info("[NOTIF-ENGINE] Routing push notification frame over WebSocket to user: {} on path: {}", recipientName, destination);
-        messagingTemplate.convertAndSend(destination, message);
+        // Wrap payload
+        SystemNotificationWrapper wrapper = new SystemNotificationWrapper(recipientName, message);
+
+        // Publish to cluster
+        redisTemplate.convertAndSend(RedisConfig.REDIS_NOTIFICATIONS_TOPIC, wrapper);
     }
 }

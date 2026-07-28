@@ -6,7 +6,13 @@ metadata:
     app: rtc-portfolio
     component: frontend
 spec:
+  # Dual replicas guarantee UI layout rendering redundancy across cluster nodes
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: rtc-portfolio
@@ -19,17 +25,17 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: realtime-communication-frontend:latest
+        image: rtc-frontend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
-          name: web-port
+          name: http-port
         resources:
           limits:
-            cpu: "500m"
+            cpu: "300m"
             memory: "256Mi"
           requests:
-            cpu: "250m"
+            cpu: "100m"
             memory: "128Mi"
 ---
 apiVersion: v1
@@ -47,4 +53,5 @@ spec:
   selector:
     app: rtc-portfolio
     component: frontend
-  type: LoadBalancer
+  # Shielded ClusterIP configuration to keep public traffic routed cleanly via Ingress rules
+  type: ClusterIP

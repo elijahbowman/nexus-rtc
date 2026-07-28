@@ -25,6 +25,7 @@ public class ChatController {
     private final ChannelService channelService;
     private final StorageFacade storageFacade;
     private final NotificationController notificationController;
+    public static final String REDIS_CHAT_CHANNEL_TOPIC_PREFIX = "app:channel:";
 
     // REAL-TIME ISOLATION LAYER: Dynamic Channel Routing Hub
     @MessageMapping("/chat.sendMessage/{channelId}")
@@ -69,11 +70,8 @@ public class ChatController {
 
         // 2. BROADCAST: Publish the payload across our Phase 2 Redis horizontal cluster topic layer
         // This ensures that all instances in our Kubernetes cluster intercept the message instantly
-        String redisTopicChannel = "app:channel:" + channelId;
+        String redisTopicChannel = REDIS_CHAT_CHANNEL_TOPIC_PREFIX + channelId;
         redisTemplate.convertAndSend(redisTopicChannel, chatMessage);
-
-        // 3. LOCAL DELIVERY: Dispatch the frame immediately to all users attached to this local instance node
-        messagingTemplate.convertAndSend("/topic/channels/" + channelId, chatMessage);
     }
 
     @MessageMapping("/chat.addUser/{channelId}")
@@ -89,7 +87,8 @@ public class ChatController {
         chatMessage.setChannelId(channelId);
         chatMessage.setType(ChatMessage.MessageType.JOIN);
 
-        // Notify room members that an active profile has synchronized into their chat context
-        messagingTemplate.convertAndSend("/topic/channels/" + channelId, chatMessage);
+        // Broadcast across the Redis cluster topic pattern mesh!
+        String redisTopicChannel = REDIS_CHAT_CHANNEL_TOPIC_PREFIX + channelId;
+        redisTemplate.convertAndSend(redisTopicChannel, chatMessage);
     }
 }
