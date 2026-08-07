@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rtc-redis
+  name: nexus-rtc-redis
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: redis
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: redis
     spec:
       containers:
@@ -35,9 +35,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rtc-redis-service
+  name: nexus-rtc-redis-service
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: redis
 spec:
   ports:
@@ -45,6 +45,6 @@ spec:
     targetPort: 6379
     name: redis
   selector:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: redis
   type: ClusterIP

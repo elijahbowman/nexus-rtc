@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  postgres:
+  nexus-rtc-postgres:
     image: postgres:15
     container_name: postgres
     environment:
@@ -13,13 +13,13 @@ services:
       - pg_persistence_layer:/var/lib/postgresql/data
     restart: unless-stopped
 
-  backend:
+  nexus-rtc-backend:
     build: ./backend
-    container_name: backend
+    container_name: nexus-rtc-backend
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/realtime_communication_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://nexus-rtc-postgres:5432/realtime_communication_db
       SPRING_DATASOURCE_USERNAME: dev
       SPRING_DATASOURCE_PASSWORD: password
       SPRING_DATA_REDIS_HOST: redis
@@ -29,23 +29,23 @@ services:
       MINIO_URL: http://minio.localhost:9000
       MINIO_BUCKET_NAME: nexus-rtc-attachments
     depends_on:
-      - postgres
-      - redis
-      - minio
+      - nexus-rtc-postgres
+      - nexus-rtc-redis
+      - nexus-rtc-minio
     restart: unless-stopped
 
-  frontend:
+  nexus-rtc-frontend:
     build: ./frontend
-    container_name: frontend
+    container_name: nexus-rtc-frontend
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - nexus-rtc-backend
     restart: unless-stopped
 
-  coturn:
+  nexus-rtc-coturn:
     image: coturn/coturn:latest
-    container_name: coturn
+    container_name: nexus-rtc-coturn
     ports:
        - "3478:3478"
        - "3478:3478/udp"
@@ -58,18 +58,18 @@ services:
     command: turnserver -c /etc/turnserver.conf --log-file=stdout
     restart: unless-stopped
   
-  redis:
+  nexus-rtc-redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: nexus-rtc-redis
     ports:
       - "6379:6379" # Maps the networking port to your host machine for test runners
     volumes:
       - redisdata:/data
 
   # MinIO S3-compatible cloud storage infrastructure
-  minio:
+  nexus-rtc-minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
-    container_name: minio
+    container_name: nexus-rtc-minio
     ports:
       - "9000:9000"        # S3 API Data Stream Interface
       - "9001:9001"        # Web Administrator Dashboard Console 

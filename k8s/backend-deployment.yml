@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rtc-backend
+  name: nexus-rtc-backend
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: backend
 spec:
   replicas: 3
@@ -14,12 +14,12 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: backend
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: backend
     spec:
       # InitContainer prevents application pods from crashing if the database is still initializing
@@ -36,7 +36,7 @@ spec:
       containers:
       - name: backend
         # Image tags are mapped to local registry names compiled during the Jenkins pipeline process
-        image: rtc-backend:latest
+        image: nexus-rtc-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -46,54 +46,54 @@ spec:
           - name: SPRING_DATASOURCE_URL
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: SPRING_DATASOURCE_URL
           - name: SPRING_DATASOURCE_USERNAME
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: POSTGRES_USER
           - name: SPRING_DATA_REDIS_HOST
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: SPRING_DATA_REDIS_HOST
           - name: SPRING_DATA_REDIS_PORT
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: SPRING_DATA_REDIS_PORT
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: AWS_ACCESS_KEY_ID
           - name: MINIO_URL
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: MINIO_URL
           - name: MINIO_BUCKET_NAME
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: MINIO_BUCKET_NAME
           
           # Secure Base64 Encrypted Secret Injection
           - name: SPRING_DATASOURCE_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: rtc-app-secrets
+                name: nexus-rtc-app-secrets
                 key: postgres-password
           - name: AWS_SECRET_ACCESS_KEY
             valueFrom:
               secretKeyRef:
-                name: rtc-app-secrets
+                name: nexus-rtc-app-secrets
                 key: minio-root-password
           - name: JWT_SECRET
             valueFrom:
               secretKeyRef:
-                name: rtc-app-secrets
+                name: nexus-rtc-app-secrets
                 key: jwt-secret
 
         # Proactive health tracking keeps faulty nodes out of routing pools
@@ -125,9 +125,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rtc-backend-service
+  name: nexus-rtc-backend-service
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: backend
 spec:
   ports:
@@ -135,7 +135,7 @@ spec:
     targetPort: 8080
     name: http
   selector:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: backend
   # ClusterIP keeps services shielded inside the internal core network mesh
   type: ClusterIP

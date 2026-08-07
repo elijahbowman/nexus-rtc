@@ -3,7 +3,7 @@ kind: PersistentVolume
 metadata:
   name: jenkins-home-pv
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 spec:
   capacity:
@@ -22,7 +22,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: jenkins-home-pvc
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 spec:
   accessModes:
@@ -38,7 +38,7 @@ metadata:
   name: jenkins-admin-sa
   namespace: default
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -46,7 +46,7 @@ kind: ClusterRoleBinding
 metadata:
   name: jenkins-admin-rbac
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 subjects:
   - kind: ServiceAccount
@@ -60,9 +60,9 @@ roleRef:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rtc-jenkins-server
+  name: nexus-rtc-jenkins-server
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 spec:
   replicas: 1
@@ -141,9 +141,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rtc-jenkins-service
+  name: nexus-rtc-jenkins-service
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: cicd
 spec:
   ports:

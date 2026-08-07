@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: minio-bucket-init
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
 spec:
   template:
     metadata:
@@ -41,10 +41,10 @@ spec:
             - name: MINIO_ROOT_USER
               valueFrom:
                 configMapKeyRef:
-                  name: rtc-app-config
+                  name: nexus-rtc-app-config
                   key: AWS_ACCESS_KEY_ID
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: rtc-app-secrets
+                  name: nexus-rtc-app-secrets
                   key: minio-root-password

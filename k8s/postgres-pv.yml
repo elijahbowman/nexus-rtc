@@ -3,7 +3,7 @@ kind: PersistentVolume
 metadata:
   name: postgres-db-pv
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: database
 spec:
   capacity:

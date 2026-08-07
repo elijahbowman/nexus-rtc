@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: minio
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: storage
 spec:
   replicas: 1
@@ -11,12 +11,12 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: storage
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: storage
     spec:
       containers:
@@ -38,13 +38,13 @@ spec:
             - name: MINIO_ROOT_USER
               valueFrom:
                 configMapKeyRef:
-                  name: rtc-app-config
+                  name: nexus-rtc-app-config
                   key: AWS_ACCESS_KEY_ID
             # Sensitive Root Password token pulled from cluster Secrets
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: rtc-app-secrets
+                  name: nexus-rtc-app-secrets
                   key: minio-root-password
           volumeMounts:
             # Mounts the permanent 5Gi file-system slice to prevent data drop anomalies
@@ -67,7 +67,7 @@ kind: Service
 metadata:
   name: minio-service
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: storage
 spec:
   ports:
@@ -78,6 +78,6 @@ spec:
       targetPort: 9001
       name: web-console
   selector:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: storage
   type: ClusterIP

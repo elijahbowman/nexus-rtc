@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: rtc-app-ingress
+  name: nexus-rtc-app-ingress
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
   annotations:
     # Instructs the cluster to use the built-in NGINX reverse-proxy engine
     kubernetes.io/ingress.class: "nginx"
@@ -16,7 +16,7 @@ metadata:
     
     # CRITICAL REAL-TIME HEADERS: Unlocks stable WebSocket/STOMP streams
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    nginx.ingress.kubernetes.io/websocket-services: "rtc-backend-service"
+    nginx.ingress.kubernetes.io/websocket-services: "nexus-rtc-backend-service"
 
     # Enforces strict session affinity tracking cookies to prevent multi-pod WebSocket drops!
     nginx.ingress.kubernetes.io/affinity: "cookie"
@@ -35,7 +35,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: rtc-jenkins-service
+                name: nexus-rtc-jenkins-service
                 port:
                   number: 8888
     - host: nexus-rtc.localhost
@@ -46,7 +46,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: rtc-backend-service
+                name: nexus-rtc-backend-service
                 port:
                   number: 8080
           # Path 2: Route standard Java JSON endpoint REST API controllers
@@ -54,7 +54,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: rtc-backend-service
+                name: nexus-rtc-backend-service
                 port:
                   number: 8080
           # Path 3: Catch-all fallback default path serving React production static assets
@@ -62,7 +62,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: rtc-frontend-service
+                name: nexus-rtc-frontend-service
                 port:
                   number: 80
     # Dedicated Admin/Storage UI Console Endpoint

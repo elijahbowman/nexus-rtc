@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: coturn-config
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: turn
 data:
   turnserver.conf: |
@@ -24,20 +24,20 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rtc-coturn
+  name: nexus-rtc-coturn
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: turn
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: turn
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: turn 
     spec:
       # Bypasses overlay NAT traps

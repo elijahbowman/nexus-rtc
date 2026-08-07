@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: postgres-db
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: database
 spec:
   replicas: 1
@@ -12,12 +12,12 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: database
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: database
     spec:
       containers:
@@ -32,18 +32,18 @@ spec:
           - name: POSTGRES_DB
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: POSTGRES_DB
           - name: POSTGRES_USER
             valueFrom:
               configMapKeyRef:
-                name: rtc-app-config
+                name: nexus-rtc-app-config
                 key: POSTGRES_USER
           # Pull highly confidential keys cleanly from Opaque Secret wrapper
           - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: rtc-app-secrets
+                name: nexus-rtc-app-secrets
                 key: postgres-password
         volumeMounts:
           # Mount the physical data directory path straight inside the box
@@ -67,13 +67,13 @@ kind: Service
 metadata:
   name: postgres-db-service  # Matches DB host variable inside backend deployment config
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: database
 spec:
   ports:
   - port: 5432
     targetPort: 5432
   selector:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: database
   type: ClusterIP

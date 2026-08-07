@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     tier: database
 spec:
   # ReadWriteOnce allows the volume to be mounted as read-write by a single cluster node

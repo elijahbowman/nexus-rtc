@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rtc-frontend
+  name: nexus-rtc-frontend
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: frontend
 spec:
   # Dual replicas guarantee UI layout rendering redundancy across cluster nodes
@@ -15,17 +15,17 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: rtc-portfolio
+      app: nexus-rtc
       component: frontend
   template:
     metadata:
       labels:
-        app: rtc-portfolio
+        app: nexus-rtc
         component: frontend
     spec:
       containers:
       - name: frontend
-        image: rtc-frontend:latest
+        image: nexus-rtc-frontend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
@@ -41,9 +41,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rtc-frontend-service
+  name: nexus-rtc-frontend-service
   labels:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: frontend
 spec:
   ports:
@@ -51,7 +51,7 @@ spec:
     targetPort: 80
     name: http
   selector:
-    app: rtc-portfolio
+    app: nexus-rtc
     component: frontend
   # Shielded ClusterIP configuration to keep public traffic routed cleanly via Ingress rules
   type: ClusterIP
