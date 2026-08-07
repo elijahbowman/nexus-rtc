@@ -47,6 +47,8 @@ const Login: React.FC = () => {
                     <div className="space-y-1">
                         <label className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] px-1">Username</label>
                         <input
+                            id="username"
+                            autoComplete="username"
                             type="text"
                             required
                             value={formData.username}
@@ -59,6 +61,8 @@ const Login: React.FC = () => {
                     <div className="space-y-1">
                         <label className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] px-1">Password</label>
                         <input
+                            id="password"
+                            autoComplete="current-password"
                             type="password"
                             required
                             value={formData.password}

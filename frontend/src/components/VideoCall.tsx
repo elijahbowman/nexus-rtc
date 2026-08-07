@@ -69,7 +69,7 @@ const VideoCall: React.FC<VideoCallProps> = ({
                         muted 
                         // Do not flip the display (remove scale-x-[-1]) when sharing screen 
                         // so text, code lines, and terminals read naturally from left to right on own mirror!
-                        className={`w-full h-full object-cover ${isScreenSharing ? '' : 'transform scale-x-[-1]'}`} 
+                        className={`w-full h-full object-cover ${isScreenSharing ? '' : 'transform //scale-x-[-1]'}`} 
                     />
                     <div className="absolute bottom-4 left-4 bg-slate-950/70 border border-slate-800 text-xs px-3 py-1.5 rounded-lg font-semibold tracking-wide text-indigo-400 backdrop-blur-sm">
                         You (Local) {isScreenSharing && '💻 (Sharing Screen)'}

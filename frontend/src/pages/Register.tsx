@@ -29,6 +29,8 @@ const Register: React.FC = () => {
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] px-1">Email</label>
             <input
+              id="email"
+              autoComplete="email"
               type="email"
               required
               value={formData.email}
@@ -41,6 +43,8 @@ const Register: React.FC = () => {
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] px-1">Username</label>
             <input
+              id="username"
+              autoComplete="username"
               type="text"
               required
               value={formData.username}
@@ -53,6 +57,8 @@ const Register: React.FC = () => {
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] px-1">Password</label>
             <input
+              id="password"
+              autoComplete="new-password"
               type="password"
               required
               value={formData.password}
