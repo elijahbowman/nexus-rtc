@@ -42,12 +42,12 @@
 @layer components {
   :root {
     color-scheme: dark !important;
-    --theme-bg: var(--color-slate-950);                                   /* Deep Base Canvas */
-    --theme-card: var(--color-slate-900);                                 /* Primary Containers */
-    --theme-border: var(--color-slate-800);                               /* Boundary Insets */
-    --theme-text: var(--color-slate-200);                                 /* High-Contrast Light Accent Labels */
-    --theme-text-muted: var(--color-slate-500);                           /* Muted Soft Gray Sub-text Typography */
-    --theme-text-contrast: var(--color-slate-300);                        /* Hardened text protection for notifications */
+    --theme-bg: var(--color-slate-950);                                   /* Deep Base Canvas #020618 */
+    --theme-card: var(--color-slate-900);                                 /* Primary Containers #0f172b */
+    --theme-border: var(--color-slate-800);                               /* Boundary Insets #1d293d */
+    --theme-text: var(--color-slate-200);                                 /* High-Contrast Light Accent Labels #e2e8f0 */
+    --theme-text-muted: var(--color-slate-500);                           /* Muted Soft Gray Sub-text Typography #62748e */
+    --theme-text-contrast: var(--color-slate-300);                        /* Hardened text protection for notifications #cad5e2 */
     --theme-card-alpha: --alpha(var(--color-slate-900) / 40%);
     --theme-bg-alpha: --alpha(var(--color-slate-950) / 40%);
     
@@ -55,10 +55,10 @@
     --theme-btn-text: var(--color-white);                                 /* Clear White text for dark mode buttons */
 
     --theme-btn-disabled-bg: var(--color-slate-800);
-    --theme-btn-disabled-text: var(--color-slate-600);
+    --theme-btn-disabled-text: var(--color-slate-600);                    /* #45556c */
 
     /* Interactive Link Colors */
-    --theme-link: var(--color-indigo-400);                                /* Bright for high-contrast dark backgrounds */
+    --theme-link: var(--color-indigo-400);                                /* Bright for high-contrast dark backgrounds #7c86ff */
     --theme-link-hover: var(--color-indigo-300);                          /* Hover tracking */
 
     --theme-timeline-bg-alpha: --alpha(var(--color-slate-950) / 20%);
@@ -117,7 +117,7 @@
     /* Interactive Sidebar Room List Token Overlays */
     --theme-item-hover: --alpha(var(--color-slate-200) / 70%);            /* Crisp clean row overlay hover fill */
     --theme-badge-bg: var(--color-slate-100);                             /* Polished crisp background accent badge */
-    --theme-badge-hover-bg: --alpha(var(--color-indigo-300) / 100%);                      /* Solid high-visibility indicator fill on hover */
+    --theme-badge-hover-bg: --alpha(var(--color-indigo-300) / 100%);      /* Solid high-visibility indicator fill on hover */
     --theme-badge-hover-text: var(--color-white);                         /* Maximum contrast access label readout */
     
     --theme-channel-active-bg: var(--color-indigo-600);                   /* Solid focus color block */
