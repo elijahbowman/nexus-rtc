@@ -5,20 +5,21 @@ metadata:
   labels:
     app: nexus-rtc
   annotations:
-    # Instructs the cluster to use the built-in NGINX reverse-proxy engine
+    # Deprecated annotation; ingressClassName below already selects the class
     kubernetes.io/ingress.class: "nginx"
     
-    # Prevents connection timeouts during high-volume document uploads
+    # Upload size limit and long timeouts for WebSocket connections
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     
-    # CRITICAL REAL-TIME HEADERS: Unlocks stable WebSocket/STOMP streams
+    # KNOWN ISSUE (I1): websocket-services is an NGINX Inc annotation with no effect in ingress-nginx,
+    # which proxies WebSockets without it. ingress-nginx itself was retired in March 2026.
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     nginx.ingress.kubernetes.io/websocket-services: "nexus-rtc-backend-service"
 
-    # Enforces strict session affinity tracking cookies to prevent multi-pod WebSocket drops!
+    # Cookie affinity. Not required: auth is stateless JWT and Redis handles cross-pod delivery (I2).
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/affinity-mode: "balanced"
     nginx.ingress.kubernetes.io/session-cookie-name: "NEXUS_RTC_AFFINITY"
@@ -41,7 +42,7 @@ spec:
     - host: nexus-rtc.localhost
       http:
         paths:
-          # Path 1: Route out-of-channel alerts and real-time STOMP handshakes
+          # WebSocket (STOMP) endpoint
           - path: /ws
             pathType: Prefix
             backend:
@@ -49,7 +50,7 @@ spec:
                 name: nexus-rtc-backend-service
                 port:
                   number: 8080
-          # Path 2: Route standard Java JSON endpoint REST API controllers
+          # REST API
           - path: /api
             pathType: Prefix
             backend:
@@ -57,7 +58,7 @@ spec:
                 name: nexus-rtc-backend-service
                 port:
                   number: 8080
-          # Path 3: Catch-all fallback default path serving React production static assets
+          # Frontend static assets
           - path: /
             pathType: Prefix
             backend:
@@ -65,7 +66,7 @@ spec:
                 name: nexus-rtc-frontend-service
                 port:
                   number: 80
-    # Dedicated Admin/Storage UI Console Endpoint
+    # KNOWN ISSUE (I6): MinIO console and S3 API exposed through the ingress with dev credentials
     - host: storage-ui.nexus-rtc.localhost
       http:
         paths:

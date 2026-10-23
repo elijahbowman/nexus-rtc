@@ -11,7 +11,8 @@ import java.util.Date;
 
 @Component
 public class JwtUtils {
-    // TODO: In production, move this to an environment variable!
+    // KNOWN ISSUE (S8): hardcoded signing secret, committed to the repo. app.jwtSecret in application.yml
+    // and jwt-secret in k8s/app-secrets.yml are never read. Inject it with @Value instead.
     private String jwtSecret = "yourSecureRandomSecretKeyThatIsAtLeast32CharactersLong!!";
     private int jwtExpirationMs = 86400000; // 24 hours
 
@@ -45,7 +46,7 @@ public class JwtUtils {
             Jwts.parserBuilder().setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes())).build().parseClaimsJws(authToken);
             return true;
         } catch (Exception e) {
-            // TODO: Log error (Expired, Malformed, etc.)
+            // TODO: log the failure reason (expired, malformed, bad signature).
         }
         return false;
     }

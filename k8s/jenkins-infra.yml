@@ -11,10 +11,10 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain # CRITICAL: Prevents K8s from wiping files if the PVC is deleted!
+  persistentVolumeReclaimPolicy: Retain # Keep data if the PVC is deleted
   storageClassName: manual-storage
   hostPath:
-    path: /data/jenkins-permanent-home # STABLE NODE LOCATION: Locked safely on the machine filesystem
+    path: /data/jenkins-permanent-home # hostPath on the node
     type: DirectoryOrCreate
 ---
 apiVersion: v1
@@ -27,10 +27,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: manual-storage # PAIRS WITH THE PV ABOVE: Bypasses the ephemeral dynamic provisioner
+  storageClassName: manual-storage # Binds to the static PV above
   resources:
     requests:
-      storage: 5Gi  # Ample space to cache local Maven dependencies (.m2) and npm modules
+      storage: 5Gi  # Maven and npm caches
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -54,7 +54,7 @@ subjects:
     namespace: default
 roleRef:
   kind: ClusterRole
-  name: cluster-admin # Grants the pipeline cluster-wide permission to manage deployments
+  name: cluster-admin # KNOWN ISSUE (P5): scope to a namespaced Role that can only update deployments
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -81,7 +81,8 @@ spec:
         - name: jenkins
           image: jenkins/jenkins:lts-jdk17
           imagePullPolicy: IfNotPresent
-          # SECURITY ELEVATION: Grants container runtime root permissions to execute local tools
+          # KNOWN ISSUE (P5): privileged + root. Combined with docker.sock and cluster-admin, any pipeline
+          # change gets full control of the node and cluster. Use Kaniko or rootless BuildKit instead.
           securityContext:
             runAsUser: 0
             privileged: true
@@ -98,13 +99,14 @@ spec:
             - -c
             - |
               echo "Configuring cluster environment directory exception rules..."
-              # Directs Git to bypass security checks within multi-user mount spaces
+              # Mark the workspace as a git safe.directory (ownership differs in the container)
               git config --global --add safe.directory '*'
               
               echo "Installing core pipeline execution requirements..."
               apt-get update && apt-get install -y libatomic1 docker.io
               
               echo "Downloading and installing native cluster kubectl binaries..."
+              # KNOWN ISSUE (P2): amd64 kubectl in an arm64 container; runs only via Docker Desktop's x86 emulation.
               curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
               chmod +x /usr/local/bin/kubectl
               
@@ -118,7 +120,7 @@ spec:
           volumeMounts:
             - name: jenkins-home-volume
               mountPath: /var/jenkins_home
-            # DOCKER SOCKET BINDING: Links the container directly to the cluster container engine
+            # Mounts the node's Docker socket (see P5)
             - name: docker-socket
               mountPath: /var/run/docker.sock
           resources:
@@ -132,7 +134,7 @@ spec:
         - name: jenkins-home-volume
           persistentVolumeClaim:
             claimName: jenkins-home-pvc
-        # PHYSICAL SOCKET ALLOCATION: Sources the MinIO/Docker daemon from the underlying cluster node
+        # Node's Docker socket
         - name: docker-socket
           hostPath:
             path: /var/run/docker.sock

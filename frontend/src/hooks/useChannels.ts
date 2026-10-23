@@ -15,7 +15,7 @@ export const useChannels = (currentUserId?: number) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. REFRESH PIPELINE: Fetches raw public rooms and user memberships simultaneously
+  // Fetch all channels and the user's memberships in parallel.
   const refreshChannels = useCallback(async () => {
     if (!currentUserId) return;
     try {
@@ -30,10 +30,10 @@ export const useChannels = (currentUserId?: number) => {
       setChannels(allRooms);
       setUserChannels(memberRooms);
 
-      // Auto-select a default fallback room if no active selection is initialized
+      // No automatic selection: the main panel stays empty until a channel is chosen.
       if (!activeChannel && allRooms.length > 0) {
         console.log("[CHANNELS-HOOK] Standby state initialized. Waiting for user sidebar interaction.");
-         setActiveChannel(null); // Leaves the main panel empty until a channel is actively chosen
+         setActiveChannel(null);
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to sync distributed channel inventories.');
@@ -42,19 +42,19 @@ export const useChannels = (currentUserId?: number) => {
     }
   }, [currentUserId, activeChannel]);
 
-  // 2. PROVISIONING HANDLER: Instantiates a room and binds the creator straight to it
+  // Create a channel (the server adds the creator as a member).
   const createNewChannel = async (name: string) => {
     if (!currentUserId) return null;
     try {
       const newRoom = await channelService.createChannel({ name, creatorId: currentUserId });
-      await refreshChannels(); // Sync arrays immediately to pull down updates
+      await refreshChannels();
       return newRoom;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Room creation constraint failure.');
     }
   };
 
-  // 3. ENTRY HANDLER: Joins a user tracking profile to a target channel roster list
+  // Join a channel.
   const joinTargetChannel = async (channelId: number) => {
     if (!currentUserId) return;
     try {
@@ -65,12 +65,13 @@ export const useChannels = (currentUserId?: number) => {
     }
   };
 
-  // 4. CORE ENGINE INITIALIZATION: Handles automatic state syncing at component mount
+  // Initial load plus polling. KNOWN ISSUE: refreshChannels depends on activeChannel, so the interval
+  // is torn down and recreated on every channel switch.
   useEffect(() => {
     refreshChannels();
 
-    // High-Utility Polling Loop: Safely auto-polls every 5 seconds to ensure rooms
-    // created on different cluster pods inside Kubernetes appear instantly on your sidebar panel.
+    // Poll every 5s so channels created by other users appear. KNOWN ISSUE (R9): two requests per user
+    // every 5s doesn't scale; push channel events over the existing WebSocket instead.
     const pollInterval = setInterval(() => {
       if (currentUserId) {
         Promise.all([
@@ -91,7 +92,7 @@ export const useChannels = (currentUserId?: number) => {
       await channelService.deleteChannel(channelId);
       await refreshChannels();
       if (activeChannel?.id === channelId) {
-        setActiveChannel(null); // Clear view viewport if active room was deleted
+        setActiveChannel(null); // The active channel was deleted
       }
     } catch (err) {
       console.error('Failed to execute channel deletion tracking loops:', err);

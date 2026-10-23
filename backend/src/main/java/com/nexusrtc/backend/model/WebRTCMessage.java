@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WebRTCMessage {
-    private String type;      // "OFFER", "ANSWER", or "CANDIDATE"
+    private String type;      // "OFFER", "ANSWER", "CANDIDATE" or "HANGUP"
     private String data;      // The actual SDP string or ICE candidate JSON
     private String sender;
-    private String receiver;  // Who is this call for?
+    private String receiver;  // Intended recipient. KNOWN ISSUE (C1): not used for routing yet
 }

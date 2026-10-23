@@ -27,7 +27,10 @@ public class ChatController {
     private final NotificationController notificationController;
     public static final String REDIS_CHAT_CHANNEL_TOPIC_PREFIX = "app:channel:";
 
-    // REAL-TIME ISOLATION LAYER: Dynamic Channel Routing Hub
+    // Receives a chat message for one channel, persists it, and fans it out to all pods via Redis.
+    // KNOWN ISSUE (S3): the payload is bound directly to the JPA entity, so the client controls `sender`,
+    // `timestamp` and `id`. A supplied `id` makes save() overwrite an existing message.
+    // Fix: accept an inbound DTO and take the sender from the authenticated Principal.
     @MessageMapping("/chat.sendMessage/{channelId}")
     public void sendMessage(@DestinationVariable Long channelId, @Payload ChatMessage chatMessage) {
         if (chatMessage == null) {
@@ -37,39 +40,36 @@ public class ChatController {
 
         log.info("Processing WebSocket text frame payload for distributed channel space ID: {}", channelId);
 
-        // Enforce implicit parameter sync to prevent client payload spoofing
+        // Use the channel id from the destination path, not the payload.
         chatMessage.setChannelId(channelId);
 
-        // Production Security Guard: Bypasses data layer execution if user lacks access metrics
-        // (Will be activated once security principal parameters are fully mapped into session context)
+        // KNOWN ISSUE (S4): no membership check; any connected client can post to any channel.
         // if (!channelService.isUserMemberOfChannel(channelId, fetchUserPrincipalFromSession())) { return; }
 
-        // THE MULTIMEDIA EXTENSION: Log active file attachment metrics for cluster tracking
-        // REAL-TIME HYDRATION: Generate the URL immediately for live users so they don't have to reload!
+        // Attach a presigned download URL so live clients can render the attachment immediately.
+        // KNOWN ISSUE (S7): attachmentPath comes from the client, so any object key can be presigned.
         if (chatMessage.getAttachmentPath() != null && !chatMessage.getAttachmentPath().isBlank()) {
             log.info("[WS-METRIC] Multimedia payload intercepted inside channel {}. Path: {}, MIME: {}",
                     channelId, chatMessage.getAttachmentPath(), chatMessage.getAttachmentType());
             try {
                 String instantUrl = storageFacade.getPresignedUrl(chatMessage.getAttachmentPath());
-                chatMessage.setAttachmentUrl(instantUrl); // Hydrate the transient property on the active payload!
+                chatMessage.setAttachmentUrl(instantUrl);
             } catch (Exception e) {
                 log.error("Failed to hydrate live streaming url frame: {}", e.getMessage());
             }
         }
 
-        // 1. Persist the text record safely to the cloud-native database engine
+        // Persist the message.
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
-        // THE PUSH NOTIFICATION EXTENSION HOOK:
-        // Automatically dispatch background badges/alerts to all other room members!
+        // Notify other channel members. KNOWN ISSUE (R5): runs synchronously, one Redis publish per member.
         try {
             notificationController.dispatchChannelNotifications(channelId, savedMessage, savedMessage.getSender());
         } catch (Exception e) {
             log.error("[WS-METRIC] Non-blocking exception inside background notification loop: {}", e.getMessage());
         }
 
-        // 2. BROADCAST: Publish the payload across our Phase 2 Redis horizontal cluster topic layer
-        // This ensures that all instances in our Kubernetes cluster intercept the message instantly
+        // Publish to Redis so every backend pod delivers it to its local subscribers of /topic/channels/{id}.
         String redisTopicChannel = REDIS_CHAT_CHANNEL_TOPIC_PREFIX + channelId;
         redisTemplate.convertAndSend(redisTopicChannel, chatMessage);
     }
@@ -78,7 +78,7 @@ public class ChatController {
     public void addUser(@DestinationVariable Long channelId, @Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         log.info("Registering user node profile session identifier: {} inside channel: {}", chatMessage.getSender(), channelId);
 
-        // Bind the connection metadata directly to the local session map context tracking layer
+        // Stored on the session but not read anywhere yet (no disconnect handler; see R7).
         if (headerAccessor.getSessionAttributes() != null) {
             headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
             headerAccessor.getSessionAttributes().put("channelId", channelId);
@@ -87,7 +87,7 @@ public class ChatController {
         chatMessage.setChannelId(channelId);
         chatMessage.setType(ChatMessage.MessageType.JOIN);
 
-        // Broadcast across the Redis cluster topic pattern mesh!
+        // Broadcast the JOIN event. KNOWN ISSUE (R7): sent on every connect and reconnect; LEAVE is never sent.
         String redisTopicChannel = REDIS_CHAT_CHANNEL_TOPIC_PREFIX + channelId;
         redisTemplate.convertAndSend(redisTopicChannel, chatMessage);
     }

@@ -17,7 +17,7 @@
   border-radius: 4px !important;
 }
 
-/* Micro-precise hover: Triggers ONLY when directly over the thumb handle */
+/* Hover applies only over the scrollbar thumb */
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: var(--theme-scrollbar-hover) !important;
 }
@@ -47,7 +47,7 @@
     --theme-border: var(--color-slate-800);                               /* Boundary Insets #1d293d */
     --theme-text: var(--color-slate-200);                                 /* High-Contrast Light Accent Labels #e2e8f0 */
     --theme-text-muted: var(--color-slate-500);                           /* Muted Soft Gray Sub-text Typography #62748e */
-    --theme-text-contrast: var(--color-slate-300);                        /* Hardened text protection for notifications #cad5e2 */
+    --theme-text-contrast: var(--color-slate-300);                        /* Notification text #cad5e2 */
     --theme-card-alpha: --alpha(var(--color-slate-900) / 40%);
     --theme-bg-alpha: --alpha(var(--color-slate-950) / 40%);
     
@@ -59,7 +59,7 @@
 
     /* Interactive Link Colors */
     --theme-link: var(--color-indigo-400);                                /* Bright for high-contrast dark backgrounds #7c86ff */
-    --theme-link-hover: var(--color-indigo-300);                          /* Hover tracking */
+    --theme-link-hover: var(--color-indigo-300);                          /* Hover */
 
     --theme-timeline-bg-alpha: --alpha(var(--color-slate-950) / 20%);
     --theme-msg-sender: var(--color-slate-500);
@@ -106,8 +106,8 @@
     --theme-btn-disabled-text: var(--color-slate-400);                    /* Muted grey text */
 
     /* Interactive Link Colors */
-    --theme-link: var(--color-indigo-500);                                /* Bright for high-contrast dark backgrounds */
-    --theme-link-hover: var(--color-indigo-400);                          /* Kover tracking */
+    --theme-link: var(--color-indigo-500);                                /* Link color for light backgrounds */
+    --theme-link-hover: var(--color-indigo-400);                          /* Hover */
 
     --theme-timeline-bg-alpha: --alpha(var(--color-slate-100) / 0.3);     /* Soft background well shimmer */
     --theme-msg-sender: var(--color-slate-500);                           /* Maintains subtle sender labels */

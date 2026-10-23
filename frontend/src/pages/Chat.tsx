@@ -18,11 +18,12 @@ const Chat = () => {
         toggleVideo
     } = useChat();
 
-    // Pull down securely mapped identity fields from local memory pools
+    // Identity from localStorage. KNOWN ISSUE (S2): silently falls back to user id 1 if userId is missing.
+    // KNOWN ISSUE (S10): there is no route guard, so /chat renders without a token.
     const currentUsername = localStorage.getItem('username') || 'AnonymousUser';
     const currentUserId = Number(localStorage.getItem('userId')) || 1;
 
-    // CUSTOM EVENT LISTENER: Bridges header clicks smoothly to WebRTC hook loops
+    // The header's call button dispatches 'initiate-call'; start the call here.
     useEffect(() => {
         const handleTriggerCall = (e: Event) => {
             const customEvent = e as CustomEvent;
@@ -49,7 +50,6 @@ const Chat = () => {
                 />
             )}
 
-            {/* Renders pristine full-width layout panels directly */}
             <div className="h-full w-full flex flex-col">
                 <MainChat username={currentUsername} userId={currentUserId} />
             </div>

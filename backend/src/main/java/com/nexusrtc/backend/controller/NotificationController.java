@@ -16,36 +16,37 @@ import java.util.List;
 @Slf4j
 public class NotificationController {
 
-    // 🚀 INJECTS ACCURATE REPOSITORY: Maps cleanly to your embedded composite key schema layers
     private final ChannelMemberRepository channelMemberRepository;
     private final WebSocketNotificationStrategy notificationStrategy;
 
     /**
-     * 📣 Broadcasts out-of-app notifications to all channel members
-     * except the individual who typed the message.
+     * Sends a notification to every channel member except the sender.
+     * KNOWN ISSUE (B2): this is a service, not a controller; rename to NotificationService.
+     * KNOWN ISSUE (R5): loads every member (N+1), publishes once per member, runs synchronously in the
+     * send path, and notifies users who are offline or already viewing the channel.
      */
     @Transactional(readOnly = true)
     public void dispatchChannelNotifications(Long channelId, ChatMessage savedMessage, String currentSenderUsername) {
         log.info("[NOTIF-ENGINE] Evaluating subscriber notification requirements for channel room ID: {}", channelId);
 
         try {
-            // 1. Fetch all members joined to this specific channel using your exact repository method
+            // Load channel members.
             List<ChannelMember> channelMembers = channelMemberRepository.findById_ChannelId(channelId);
             if (channelMembers == null || channelMembers.isEmpty()) return;
 
-            // 2. Extract the channel name from the first valid record
+            // Channel name for the notification text.
             String channelName = "unknown";
             if (!channelMembers.isEmpty() && channelMembers.get(0).getChannel() != null) {
                 channelName = channelMembers.get(0).getChannel().getName();
             }
 
-            // 3. Loop through the membership list and dispatch notification alerts
+            // One notification per member.
             for (ChannelMember membership : channelMembers) {
                 if (membership.getUser() == null) continue;
 
                 String recipientUsername = membership.getUser().getUsername();
 
-                // UX CHECKPOINT: Never send a push notification to the user who sent the message!
+                // Skip the sender.
                 if (recipientUsername != null && recipientUsername.equalsIgnoreCase(currentSenderUsername)) {
                     continue;
                 }
@@ -53,7 +54,7 @@ public class NotificationController {
                 // Add channel name
                 savedMessage.setChannelName(channelName);
 
-                // Route the alert payload over your active WebSocket strategy
+                // Deliver via the configured NotificationStrategy.
                 notificationStrategy.sendNotification(recipientUsername, savedMessage);
             }
         } catch (Exception e) {

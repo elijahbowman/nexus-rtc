@@ -1,4 +1,3 @@
-// Add the 'type' keyword here
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 const instance = axios.create({

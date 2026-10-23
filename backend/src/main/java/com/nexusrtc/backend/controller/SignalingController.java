@@ -18,7 +18,12 @@ public class SignalingController {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    // When User A "calls" User B, they send an offer here
+    // KNOWN ISSUE (C1, C3, C4): every signal (offer, answer, candidate, hangup) goes to one Redis topic and
+    // is delivered to /topic/public, so every connected user receives every call's SDP and ICE candidates.
+    // Fix: route with convertAndSendToUser(receiver, ...) and include a call id.
+    // KNOWN ISSUE (S5): principal is null for unauthenticated sessions, so these handlers throw an NPE.
+
+    // Caller sends an SDP offer.
     @MessageMapping("/call.offer")
     public void offer(@Payload WebRTCMessage message, Principal principal) {
 
@@ -27,11 +32,11 @@ public class SignalingController {
 
         message.setSender(principal.getName());
 
-        // Publish to the cluster instead of broadcasting to a single node's memory
+        // Publish via Redis so the signal reaches users connected to other pods.
         redisTemplate.convertAndSend(RedisConfig.REDIS_RTC_COORDINATOR_TOPIC, message);
     }
 
-    // Peer B sends their "Answer" back
+    // Callee sends an SDP answer.
     @MessageMapping("/call.answer")
     public void answer(@Payload WebRTCMessage message, Principal principal) {
 
@@ -40,11 +45,11 @@ public class SignalingController {
 
         message.setSender(principal.getName());
 
-        // Publish to the cluster instead of broadcasting to a single node's memory
+        // Publish via Redis so the signal reaches users connected to other pods.
         redisTemplate.convertAndSend(RedisConfig.REDIS_RTC_COORDINATOR_TOPIC, message);
     }
 
-    // Peers exchange ICE Candidates (Network info)
+    // Both peers send ICE candidates.
     @MessageMapping("/call.candidate")
     public void candidate(@Payload WebRTCMessage message, Principal principal) {
 
@@ -62,7 +67,7 @@ public class SignalingController {
         message.setSender(principal.getName());
         message.setType("HANGUP");
 
-        // Broadcast across all scaled pods via the shared Redis coordinator topic channel!
+        // KNOWN ISSUE (C3): broadcast to everyone, so every client in a call ends it on any HANGUP.
         redisTemplate.convertAndSend(RedisConfig.REDIS_RTC_COORDINATOR_TOPIC, message);
     }
 }

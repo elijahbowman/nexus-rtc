@@ -30,7 +30,6 @@ public class UserDetailsImpl implements UserDetails {
         return new UserDetailsImpl(user.getId(), user.getUsername(), user.getEmail(), user.getPassword());
     }
 
-    // Standard Getters/Overrides... (username, password, etc.)
     @Nonnull public Long getId() { return id; }
     @Override @Nonnull public String getUsername() { return username; }
     @Override public String getPassword() { return password; }
@@ -42,6 +41,6 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     @Nonnull
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities; // This variable should be defined in your class fields
+        return authorities;
     }
 }

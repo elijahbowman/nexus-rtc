@@ -35,14 +35,15 @@ spec:
               echo "Database layer detected! Booting application microservice...";
       containers:
       - name: backend
-        # Image tags are mapped to local registry names compiled during the Jenkins pipeline process
+        # KNOWN ISSUE (P1): Jenkins builds rtc-backend:latest, but this uses nexus-rtc-backend:latest, so
+        # pipeline builds are never deployed. Images are loaded manually with `minikube image load`.
         image: nexus-rtc-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: api-port
         env:
-          # Centralized Configuration Injection
+          # Non-secret config from the ConfigMap
           - name: SPRING_DATASOURCE_URL
             valueFrom:
               configMapKeyRef:
@@ -79,7 +80,7 @@ spec:
                 name: nexus-rtc-app-config
                 key: MINIO_BUCKET_NAME
           
-          # Secure Base64 Encrypted Secret Injection
+          # Secrets (base64-encoded, not encrypted)
           - name: SPRING_DATASOURCE_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -96,15 +97,15 @@ spec:
                 name: nexus-rtc-app-secrets
                 key: jwt-secret
 
-        # Proactive health tracking keeps faulty nodes out of routing pools
+        # TCP probes only check that the port is open. KNOWN ISSUE (B9): use Actuator liveness/readiness.
         livenessProbe:
           tcpSocket:
-            port: 8080  # Verifies the port socket is open & listening
+            port: 8080
           initialDelaySeconds: 95
           periodSeconds: 15
         readinessProbe:
           tcpSocket:
-            port: 8080 # Verifies the port socket is open & listening
+            port: 8080
           initialDelaySeconds: 85
           periodSeconds: 15
 
@@ -117,6 +118,8 @@ spec:
             memory: "512Mi"
 
       hostAliases:
+        # KNOWN ISSUE (B7): pins the ingress controller's ClusterIP so the backend can presign URLs for
+        # storage.nexus-rtc.localhost. The IP differs per cluster and must be updated by hand.
         # - ip: "10.104.71.86"
         - ip: "10.101.60.142" # ingress-nginx-controller CLUSTER-IP retrieved by running `kubectl get svc -n ingress-nginx ingress-nginx-controller`
           hostnames:
@@ -137,5 +140,5 @@ spec:
   selector:
     app: nexus-rtc
     component: backend
-  # ClusterIP keeps services shielded inside the internal core network mesh
+  # Internal only; external traffic arrives through the Ingress
   type: ClusterIP

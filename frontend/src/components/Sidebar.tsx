@@ -24,12 +24,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // ACCESSIBLE THEME PERSISTENCE CONTROL (TAILWIND v4 ALIGNED)
+  // Theme toggle, persisted to localStorage.
   const [isLight, setIsLight] = useState<boolean>(() => {
     return localStorage.getItem('app-theme') === 'light';
   });
 
-  // Submit Handler for Room Provisioning
+  // Create-channel form submit.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  // Helper tracking rule to check if the current user has already joined a room list
+  // Whether the current user is a member of a channel.
   const isMember = (channelId: number) => userChannels.some(c => c.id === channelId);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="w-64 bg-[var(--theme-card)] text-[var(--theme-text)] flex flex-col h-full border-r border-[var(--theme-border)]">
-      {/* Brand & Identity Section */}
+      {/* Header */}
       <div className="p-4 border-b border-[var(--theme-border)] flex items-center justify-between">
         <div>
           <h1 className="font-bold text-lg text-indigo-400">NexusRTC ☸️</h1>
@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Channels List Layout */}
+      {/* Channel list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
         <div>
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)] mb-2 px-2">
@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          {/* Dynamic Creation Form Box */}
+          {/* Create-channel form */}
           {isCreating && (
             <form onSubmit={handleSubmit} className="mb-4 p-2 bg-[var(--theme-form-bg)] rounded-md transition-all">
               <input
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </form>
           )}
 
-          {/* Rooms Iteration View */}
+          {/* Channels */}
           <div className="space-y-1">
             {channels.length === 0 ? (
               <p className="text-xs text-[var(--theme-text-muted)] italic px-2">No active channels found.</p>
@@ -138,17 +138,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span className="truncate">{channel.name}</span>
                       </div>
 
-                      {/* Dynamic Access Indicator Badges */}
+                      {/* Membership badge */}
                       {!hasJoined && (
                         <span className="text-[10px] bg-[var(--theme-badge-bg)] text-[var(--theme-text-muted)] group-hover:bg-[var(--theme-badge-hover-bg)] group-hover:text-[var(--theme-badge-hover-text)] px-1.5 py-0.5 rounded font-medium transition-colors duration-150">Join</span>
                       )}
                     </button>
 
-                    {/* ADMIN TRASH BUTTON: Visible smoothly on row hover */}
+                    {/* Delete button, shown on hover. Hidden for non-members in the UI only; the API has no ownership check (S6). */}
                     {hasJoined && (
                       <button
                         onClick={(e) => {
-                          e.stopPropagation(); // Avoid triggering route focus selection triggers
+                          e.stopPropagation(); // Don't also select the channel
                           if (confirm(`Delete channel #${channel.name}?`)) onDeleteChannel(channel.id);
                         }}
                         className="absolute right-2 opacity-0 group-hover:opacity-100 text-[var(--theme-text-muted)] hover:text-[var(--theme-trash-hover)] transition-all p-1 text-xs"
@@ -165,14 +165,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* System Status Footnote Panel with Accessible Theme Toggle Switcher */}
+      {/* Footer. KNOWN ISSUE: the "Cluster Sync: Online" indicator is static, not tied to connection state. */}
       <div className="p-3 bg-[var(--theme-bg-alpha)] border-t border-[var(--theme-border)] text-[10px] text-[var(--theme-text-muted)] flex items-center justify-between w-full transition-colors duration-200">
         <div className="flex items-center space-x-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="font-mono">Cluster Sync: Online</span>
         </div>
 
-        {/* 🚀 ARIA-COMPLIANT ACCESSIBLE THEME TOGGLE BUTTON */}
+        {/* Theme toggle */}
         <button
           onClick={() => setIsLight(!isLight)}
           aria-label={`Switch to ${isLight ? 'Dark' : 'Light'} Mode`}
