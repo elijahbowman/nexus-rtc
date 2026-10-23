@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   nexus-rtc-postgres:
     image: postgres:15
@@ -17,75 +16,110 @@ services:
     build: ./backend
     container_name: nexus-rtc-backend
     ports:
-      - "8080:8080"
+      - "8080:8080" # direct access for debugging; the app goes through the gateway
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://nexus-rtc-postgres:5432/realtime_communication_db
       SPRING_DATASOURCE_USERNAME: dev
       SPRING_DATASOURCE_PASSWORD: password
-      SPRING_DATA_REDIS_HOST: redis
-      # Inject MinIO/S3 Environment Credentials to establish clean integration connections
+      SPRING_DATA_REDIS_HOST: nexus-rtc-redis
+      # S3 credentials (SeaweedFS accepts any credentials without its own S3 config)
       AWS_ACCESS_KEY_ID: devuser
       AWS_SECRET_ACCESS_KEY: devpassword
       MINIO_URL: http://minio.localhost:9000
       MINIO_BUCKET_NAME: nexus-rtc-attachments
+    # KNOWN ISSUE (I7): Postgres and Redis have no health checks, so the backend can start before they're ready
     depends_on:
-      - nexus-rtc-postgres
-      - nexus-rtc-redis
-      - nexus-rtc-minio
+      nexus-rtc-postgres:
+        condition: service_started
+      nexus-rtc-redis:
+        condition: service_started
+      nexus-rtc-storage-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   nexus-rtc-frontend:
     build: ./frontend
     container_name: nexus-rtc-frontend
-    ports:
-      - "80:80"
+    # No published port: the gateway serves it on port 80
     depends_on:
       - nexus-rtc-backend
     restart: unless-stopped
 
+  # Local stand-in for the Kubernetes ingress: / to the frontend, /api and /ws to the backend
+  nexus-rtc-gateway:
+    image: nginx:1.27-alpine
+    container_name: nexus-rtc-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - nexus-rtc-frontend
+      - nexus-rtc-backend
+    restart: unless-stopped
+
   nexus-rtc-coturn:
-    image: coturn/coturn:latest
+    image: coturn/coturn:latest # KNOWN ISSUE (I7): pin a version
     container_name: nexus-rtc-coturn
     ports:
-       - "3478:3478"
-       - "3478:3478/udp"
-       - "5349:5349"
-       - "5349:5349/udp" 
-       # Range for the actual video data
-       - "49152-49252:49152-49252/udp"   
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+      # Relay port range for media
+      - "49152-49252:49152-49252/udp"
     volumes:
       - ./coturn/turnserver.conf:/etc/turnserver.conf:ro
     command: turnserver -c /etc/turnserver.conf --log-file=stdout
     restart: unless-stopped
-  
+
   nexus-rtc-redis:
     image: redis:7-alpine
     container_name: nexus-rtc-redis
     ports:
-      - "6379:6379" # Maps the networking port to your host machine for test runners
+      - "6379:6379" # Exposed for local test runs
     volumes:
       - redisdata:/data
 
-  # MinIO S3-compatible cloud storage infrastructure
+  # S3-compatible storage. SeaweedFS replaces MinIO, which no longer publishes images (I6).
+  # The service keeps its old name and the minio.localhost alias so the backend config is unchanged.
   nexus-rtc-minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
+    image: chrislusf/seaweedfs:latest # KNOWN ISSUE (I7): pin a version
     container_name: nexus-rtc-minio
     ports:
-      - "9000:9000"        # S3 API Data Stream Interface
-      - "9001:9001"        # Web Administrator Dashboard Console 
-    environment:
-      MINIO_ROOT_USER: devuser
-      MINIO_ROOT_PASSWORD: devpassword
+      - "9000:9000" # S3 API
     volumes:
       - miniodata:/data
-    # command instructs the image to start the server and bind the console web routing assets cleanly
     networks:
       default:
-        # Bridges the internal Docker network layer cleanly
         aliases:
-          - minio.localhost # a custom local domain setup in /etc/hosts (MAC) that points to 127.0.0.1 so front and backend can use the same endpoint url for S3 Signature V4 cryptographic hash matching
-    command: server /data --console-address ":9001"
+          # /etc/hosts maps minio.localhost to 127.0.0.1, so the backend and the browser use the
+          # same S3 host and presigned URL signatures match
+          - minio.localhost
+    command: server -dir=/data -s3 -s3.port=9000
     restart: unless-stopped
+
+  # One-shot job: waits for the S3 API, creates the attachments bucket if it's missing, then exits.
+  # The backend waits for it to finish.
+  nexus-rtc-storage-init:
+    image: amazon/aws-cli:2.17.0
+    container_name: nexus-rtc-storage-init
+    environment:
+      AWS_ACCESS_KEY_ID: devuser
+      AWS_SECRET_ACCESS_KEY: devpassword
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until aws --endpoint-url http://nexus-rtc-minio:9000 s3 ls > /dev/null 2>&1; do
+          echo "Waiting for the S3 API..."
+          sleep 2
+        done
+        aws --endpoint-url http://nexus-rtc-minio:9000 s3 mb s3://nexus-rtc-attachments \
+          || echo "Bucket already exists"
+    depends_on:
+      - nexus-rtc-minio
+    restart: "no"
 
 volumes:
   pg_persistence_layer:

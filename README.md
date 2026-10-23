@@ -115,14 +115,24 @@ kubectl apply -f k8s
 
 **TURN:** `coturn/turnserver.conf` uses `external-ip=10.0.0.58` and the frontend uses `turn:localhost:3478`. Calls between two browsers on one machine work; calls from other machines need both values set to an address those machines can reach (C7).
 
-### Docker Compose — currently broken
+### Docker Compose
 
-`docker-compose.yml` doesn't work as written (I7):
-- the backend looks for Redis at `redis`, but the service is named `nexus-rtc-redis`;
-- the frontend image is built for the ingress URLs, and Compose has nothing routing `/api` and `/ws` to the backend;
-- nothing creates the MinIO bucket.
+**Prerequisites:** Docker Desktop, and these entries in `/etc/hosts` pointing to `127.0.0.1`:
+`nexus-rtc.localhost minio.localhost`
 
-Fixing Compose is on the Phase 2 list.
+```shell
+docker compose up --build -d
+```
+
+Open `http://nexus-rtc.localhost`. An nginx gateway (`gateway/nginx.conf`) stands in for the Kubernetes ingress: `/api` and `/ws` go to the backend, and everything else goes to the frontend. The frontend calls `/api` and `/ws` on whatever host served the page, so the same image works under Compose and Kubernetes.
+
+Differences from the Kubernetes setup:
+- **Storage** is SeaweedFS (S3 API on `minio.localhost:9000`), because MinIO no longer publishes images. Kubernetes still runs MinIO (I6).
+- **One backend replica**, so cross-pod delivery isn't exercised. Messages still pass through Redis.
+- **Port 80** is used by the gateway, so don't run Compose and `minikube tunnel` at the same time.
+- **The attachments bucket** is created by a one-shot `nexus-rtc-storage-init` service before the backend starts.
+
+Remaining gaps are listed under I7.
 
 ### Tests
 
@@ -178,7 +188,7 @@ The larger cost today is elsewhere, though. Notification dispatch publishes once
 
 ## Known issues
 
-IDs are referenced from `KNOWN ISSUE (...)` comments in the code. Severity: **Critical** = exploitable or loses data, **High** = broken for normal use, **Medium** = scaling or robustness, **Low** = cleanup. All items are open.
+IDs are referenced from `KNOWN ISSUE (...)` comments in the code. Severity: **Critical** = exploitable or loses data, **High** = broken for normal use, **Medium** = scaling or robustness, **Low** = cleanup. Items marked **Fixed** stay listed so their history is easy to follow; everything else is open.
 
 ### Security
 
@@ -245,7 +255,7 @@ IDs are referenced from `KNOWN ISSUE (...)` comments in the code. Severity: **Cr
 | F2 | Medium | `useChannels` recreates its polling interval on every channel switch. The active channel is restored from `localStorage` without checking membership. |
 | F3 | Low | Snackbar timeouts aren't cleared; messages use `key={index}`; logout calls `localStorage.clear()` (losing the theme); the register page can render an error object, which crashes React. |
 | F4 | Low | Inline SVGs use the wrong namespace (`http://w3.org`) while `lucide-react` is already installed; icon-only buttons lack `aria-label`s; the "Cluster Sync: Online" indicator is static. |
-| F5 | Medium | `VITE_*` URLs are baked in at build time, so one image can't move between environments; `.env.development` points at `:8080`, which isn't in the CORS or WebSocket allowed origins for the Vite dev server on `:5173`. |
+| F5 | Fixed | The frontend now calls `/api` and `/ws` on its own host instead of build-time URLs, and the Vite dev server proxies both to the backend. |
 | F6 | Medium | Plain `http`/`ws` only works because browsers treat `*.localhost` as a secure context. Any real hostname needs HTTPS for `getUserMedia`. |
 
 ### Infrastructure
@@ -258,7 +268,7 @@ IDs are referenced from `KNOWN ISSUE (...)` comments in the code. Severity: **Cr
 | I4 | Medium | No graceful shutdown or connection draining, and clients reconnect after a fixed 5s with no jitter, so every rollout drops all sockets at once. | `server.shutdown=graceful`, `preStop`, jittered backoff. |
 | I5 | Medium | No NetworkPolicy, PodDisruptionBudget, HPA, `securityContext` or namespace; Postgres is a Deployment on a hostPath volume. | Add them; StatefulSet or a managed database. |
 | I6 | Medium | The MinIO console and API are exposed through the ingress with dev credentials. MinIO's community edition is in maintenance mode and no longer publishes images, so the pinned images won't get fixes. | Don't expose the console; evaluate SeaweedFS or Garage, or S3 with LocalStack for dev. |
-| I7 | High | Docker Compose doesn't run (see [Docker Compose](#docker-compose--currently-broken)); coturn is `latest` there; `depends_on` has no health checks. | Fix the host names; add an nginx proxy for `/api` and `/ws`; add a bucket init service. |
+| I7 | Low | Compose now runs (see [Docker Compose](#docker-compose)), with gaps: coturn and SeaweedFS use `latest`; Postgres and Redis have no health checks, so the backend can start before they're ready. | Pinned image versions; health checks. |
 
 ### CI/CD
 
