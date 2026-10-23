@@ -46,6 +46,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(
                         "http://localhost",
+                        "http://localhost:5173", // Vite dev server
                         "http://nexus-rtc.localhost"
                 ); // Match React URLs
     }

@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { useChannels } from '../hooks/useChannels';
 import { type Channel, channelService, type ChatMessagePayload } from '../services/channelService';
 import api from '../api/axios';
+import { WS_URL } from '../config/urls';
 
 interface MainChatProps {
   username: string;
@@ -47,7 +48,6 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     let isMounted = true;
     setMessages([]); // Clear messages when switching channels
 
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
     const token = localStorage.getItem('token');
     const client = new Client({
       brokerURL: WS_URL,

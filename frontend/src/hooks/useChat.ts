@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import { jwtDecode } from 'jwt-decode';
+import { WS_URL } from '../config/urls';
 
 const getInitialUser = () => {
     const token = localStorage.getItem('token');
@@ -278,8 +279,6 @@ export const useChat = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-
-        const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
 
         const client = new Client({
             brokerURL: WS_URL,
