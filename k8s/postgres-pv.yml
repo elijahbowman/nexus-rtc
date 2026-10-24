@@ -11,8 +11,8 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain # CRITICAL: Tells K8s to freeze and protect files even if the PVC is deleted!
+  persistentVolumeReclaimPolicy: Retain # Keep data if the PVC is deleted
   storageClassName: postgres-manual-storage
   hostPath:
-    path: /data/postgres-permanent-storage # STABLE BACKEND PATH: Permanently locked onto the cluster VM node disk
+    path: /data/postgres-permanent-storage # hostPath on the node (single-node dev only)
     type: DirectoryOrCreate

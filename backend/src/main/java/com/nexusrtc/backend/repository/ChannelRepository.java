@@ -7,9 +7,9 @@ import java.util.Optional;
 
 @Repository
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
-    // Used to find a specific room by its clean text handle (e.g., "general")
+    // Look up a channel by normalized name, e.g. "general".
     Optional<Channel> findByName(String name);
 
-    // Security Check: Verifies if a channel name is already taken before creation
+    // Name check. Not race-safe; the unique constraint is the real guard (B3).
     boolean existsByName(String name);
 }

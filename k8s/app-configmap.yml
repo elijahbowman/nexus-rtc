@@ -10,11 +10,11 @@ data:
   POSTGRES_USER: "dev"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-db-service:5432/realtime_communication_db"
   
-  # Redis Cluster Service Ingress
+  # Redis (single instance)
   SPRING_DATA_REDIS_HOST: "nexus-rtc-redis-service"
   SPRING_DATA_REDIS_PORT: "6379"
   
-  # MinIO S3 API Endpoint and Bucket Routing
+  # MinIO / S3
   AWS_ACCESS_KEY_ID: "devuser"
   MINIO_URL: "http://storage.nexus-rtc.localhost"
   MINIO_BUCKET_NAME: "nexus-rtc-attachments"

@@ -12,13 +12,13 @@ import java.util.List;
 @Repository
 public interface ChannelMemberRepository extends JpaRepository<ChannelMember, ChannelMemberId> {
 
-    // SIDEBAR LIST LOADING: High-utility query to fetch all channels a specific user populates
+    // Channels a user belongs to (sidebar).
     @Query("SELECT cm.channel FROM ChannelMember cm WHERE cm.id.userId = :userId")
     List<Channel> findChannelsByUserId(@Param("userId") Long userId);
 
-    // Room Roster lookup: Fetches all members currently joined to a specific chat room
+    // Members of a channel.
     List<ChannelMember> findById_ChannelId(Long channelId);
 
-    // Access Authorization Gate: Confirms if a specific user has permission to read/write to a room
+    // Membership check.
     boolean existsById_ChannelIdAndId_UserId(Long channelId, Long userId);
 }

@@ -1,13 +1,12 @@
 import api from '../api/axios';
 
-// Define clear TypeScript interfaces to guarantee absolute type-safety across views
 export interface Channel {
   id: number;
   name: string;
   createdAt: string;
 }
 
-// Explicit message data model interface matching backend object
+// Mirrors the backend ChatMessage entity.
 export interface ChatMessagePayload {
   id?: number;
   channelId: number;
@@ -18,49 +17,49 @@ export interface ChatMessagePayload {
   timestamp?: string;
   attachmentPath?: string;
   attachmentType?: string;
-  attachmentUrl?: string; // Captures transient presigned target urls
+  attachmentUrl?: string; // Presigned download URL (not persisted)
 }
 
 export interface ChannelCreationRequest {
   name: string;
-  creatorId?: number; // Optional until user login contextual flows freeze
+  creatorId?: number; // KNOWN ISSUE (S1): sent by the client; the server should use the JWT
 }
 
 export const channelService = {
 
-  // 1. CREATE: Dispatches a room initialization payload to the backend data layer
+  // Create a channel.
   createChannel: async (request: ChannelCreationRequest): Promise<Channel> => {
     const response = await api.post<Channel>(`/channels`, request);
     return response.data;
   },
 
-  // 2. READ ALL: Fetches a raw inventory array of every active public chat room
+  // All channels.
   getAllChannels: async (): Promise<Channel[]> => {
     const response = await api.get<Channel[]>(`/channels`);
     return response.data;
   },
 
-  // 3. READ FOR USER: Loads all channel spaces a specific identity profile populates
+  // Channels for a user. KNOWN ISSUE (S1): passes userId explicitly.
   getChannelsForUser: async (userId: number): Promise<Channel[]> => {
     const response = await api.get<Channel[]>(`/channels/user/${userId}`);
     return response.data;
   },
 
-  // 4. JOIN: Bonds a user tracking profile to a target channel roster list
+  // Join a channel.
   joinChannel: async (channelId: number, userId: number): Promise<void> => {
     await api.post(`/channels/${channelId}/join`, null, {
       params: { userId }
     });
   },
 
-  // 5. LEAVE: Safely removes the user reference out of the room tracking parameters
+  // Leave a channel.
   leaveChannel: async (channelId: number, userId: number): Promise<void> => {
     await api.post(`/channels/${channelId}/leave`, null, {
       params: { userId }
     });
   },
 
-  // 6. Extracts historical logs chronologically
+  // Message history (unpaginated, R4).
   getChannelHistory: async (channelId: number, userId: number): Promise<ChatMessagePayload[]> => {
     const response = await api.get<ChatMessagePayload[]>(`/channels/${channelId}/messages`, {
       params: { userId }

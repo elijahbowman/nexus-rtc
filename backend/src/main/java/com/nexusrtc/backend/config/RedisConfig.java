@@ -16,7 +16,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Slf4j
 public class RedisConfig {
 
-    // Global pub/sub topic channel string matching our broadcast design
+    // Redis pub/sub topics.
     public static final String REDIS_RTC_COORDINATOR_TOPIC = "nexus-rtc-signaling";
     public static final String REDIS_CHAT_CHANNEL_TOPIC_PREFIX = "app:channel:";
     public static final String REDIS_NOTIFICATIONS_TOPIC = "app-system-notifications";
@@ -26,18 +26,18 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 1. Construct a custom Jackson serializer equipped for modern Java 8 times
+        // Jackson serializer with Java time support.
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-        // Register the missing JSR310 module mentioned in your stack trace
+        // JSR-310 module for LocalDateTime.
         mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
-        // Instruct Jackson to write clean ISO-8601 strings instead of messy raw timestamps
+        // Write dates as ISO-8601 strings rather than numeric timestamps.
         mapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         Jackson2JsonRedisSerializer<Object> jsonSerializer = new Jackson2JsonRedisSerializer<>(mapper, Object.class);
 
-        // 2. Map serialization styles to template scopes
+        // String keys, JSON values.
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(jsonSerializer);
         template.setHashKeySerializer(new StringRedisSerializer());
@@ -53,13 +53,13 @@ public class RedisConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
 
-        // 1. Intercept the explicit static WebRTC video/audio calling and screensharing traffic
+        // WebRTC signaling topic.
         container.addMessageListener(listenerAdapter, new ChannelTopic(REDIS_RTC_COORDINATOR_TOPIC));
 
-        // 2. Intercept all text chat channel traffic across pods
+        // All chat channels. Pattern subscription: every pod receives every channel's messages.
         container.addMessageListener(listenerAdapter, new PatternTopic(REDIS_CHAT_CHANNEL_TOPIC_PREFIX + "*"));
 
-        // 3. Bind cluster-wide notification channel topic context
+        // Notifications topic. Every pod receives every notification.
         container.addMessageListener(listenerAdapter, new ChannelTopic(REDIS_NOTIFICATIONS_TOPIC));
 
         log.info("[REDIS-INFRA] Distributed Pub/Sub Listener Container mapped to topics");
@@ -68,7 +68,8 @@ public class RedisConfig {
 
     @Bean
     public MessageListenerAdapter listenerAdapter(RedisMessageSubscriber subscriber) {
-        // Tie incoming Redis payloads straight to the 'receiveMessage' method inside our subscriber
+        // Delegates to RedisMessageSubscriber.receiveMessage(String). The Redis channel name is dropped
+        // here, which is why the subscriber has to route by payload shape (R6).
         return new MessageListenerAdapter(subscriber, "receiveMessage");
     }
 }

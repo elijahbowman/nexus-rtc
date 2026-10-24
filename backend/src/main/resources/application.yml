@@ -1,11 +1,12 @@
 spring:
+  # Local defaults; Docker and Kubernetes override these with SPRING_DATASOURCE_* variables.
   datasource:
     url: jdbc:postgresql://localhost:5432/realtime_communication_db
     username: dev
     password: password
   jpa:
     hibernate:
-      ddl-auto: validate # Guard data profiles by relying strictly on Flyway SQL files!
+      ddl-auto: validate # Flyway owns the schema; Hibernate only validates it
     show-sql: true
     properties:
       hibernate:
@@ -16,11 +17,11 @@ spring:
       host: localhost
       port: 6379
 
-  # FLYWAY AUTOMATED INGRESS SETUP:
+  # Flyway migrations
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true # Prevents crashes if a persistent local volume already has columns initialized
+    baseline-on-migrate: true # Convenience for existing local volumes; can hide schema drift in production (B4)
 
 aws:
   access:
@@ -34,11 +35,12 @@ minio:
   bucket:
     name: ${MINIO_BUCKET_NAME:nexus-rtc-attachments}
 
-# JWT Secret (TODO: Move to env variables in production!)
+# KNOWN ISSUE (S8): not read anywhere; JwtUtils has its own hardcoded secret
 app:
   jwtSecret: yourSecureRandomSecretKeyThatIsAtLeast32CharactersLong!!
   jwtExpirationMs: 86400000
 
+# KNOWN ISSUE (B5): DEBUG/TRACE logging and show-sql apply to every environment, including Kubernetes.
 logging:
   level:
     org.springframework.web.socket: DEBUG

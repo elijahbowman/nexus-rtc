@@ -32,11 +32,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // prefix for messages the server sends TO the client (BOTH broadcast topics and user-specific queues!)
+        // Destinations handled by the in-memory broker (topics and queues).
         config.enableSimpleBroker("/topic", "/queue");
-        // prefix for messages the client sends TO the server routed to @MessageMapping controllers
+        // Client SEND frames with this prefix go to @MessageMapping controllers.
         config.setApplicationDestinationPrefixes("/app");
-        // Prefix for Spring Security UserDestinationMessageHandler private destination routing
+        // Prefix for user destinations (/user/...). Not used yet: notifications go to
+        // /queue/notifications/{username}, which any client can subscribe to (S4).
         config.setUserDestinationPrefix("/user");
     }
 
@@ -45,6 +46,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(
                         "http://localhost",
+                        "http://localhost:5173", // Vite dev server
                         "http://nexus-rtc.localhost"
                 ); // Match React URLs
     }
@@ -56,6 +58,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
+                // KNOWN ISSUE (S5): a CONNECT with a missing or invalid token is still accepted as an anonymous
+                // session. It should be rejected by throwing here.
+                // KNOWN ISSUE (S4): SUBSCRIBE and SEND frames are never authorized, and clients can SEND straight to
+                // broker destinations (/topic/...), bypassing the controllers entirely.
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String authHeader = accessor.getFirstNativeHeader("Authorization");
                     if (authHeader != null && authHeader.startsWith("Bearer ")) {

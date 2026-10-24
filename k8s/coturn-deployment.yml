@@ -40,8 +40,8 @@ spec:
         app: nexus-rtc
         component: turn 
     spec:
-      # Bypasses overlay NAT traps
-      # Binds coturn straight to physical machine's 10.0.0.58 network path
+      # hostNetwork so relay ports are reachable on the node's IP (10.0.0.58 on the author's LAN).
+      # KNOWN ISSUE (S9): with no denied-peer-ip rules, TURN clients can relay into the node network.
       hostNetwork: true
       containers:
       - name: coturn
@@ -50,7 +50,7 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /etc/coturn/turnserver.conf
-          subPath: turnserver.conf  # Maps the explicit file snapshot cleanly
+          subPath: turnserver.conf
         resources:
           limits:
             cpu: "500m"

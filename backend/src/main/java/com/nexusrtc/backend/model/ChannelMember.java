@@ -30,7 +30,7 @@ public class ChannelMember {
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("userId") // Maps this relationship straight to the embedded key property
     @JoinColumn(name = "user_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE) // Protects member mapping lookups on user deletion
+    @OnDelete(action = OnDeleteAction.CASCADE) // Remove memberships when the user is deleted
     private User user;
 
     @Column(name = "joined_at", nullable = false, updatable = false)

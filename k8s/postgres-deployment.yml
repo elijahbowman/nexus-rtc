@@ -7,7 +7,7 @@ metadata:
     component: database
 spec:
   replicas: 1
-  # Strategy Recreate prevents multi-pod volume locking collision anomalies
+  # Recreate: the RWO volume can't be mounted by old and new pods at once
   strategy:
     type: Recreate
   selector:
@@ -28,7 +28,7 @@ spec:
         - containerPort: 5432
           name: db-port
         env:
-          # Pull public non-sensitive attributes out of the global ConfigMap
+          # Non-secret config
           - name: POSTGRES_DB
             valueFrom:
               configMapKeyRef:
@@ -39,14 +39,14 @@ spec:
               configMapKeyRef:
                 name: nexus-rtc-app-config
                 key: POSTGRES_USER
-          # Pull highly confidential keys cleanly from Opaque Secret wrapper
+          # Password from the Secret
           - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: nexus-rtc-app-secrets
                 key: postgres-password
         volumeMounts:
-          # Mount the physical data directory path straight inside the box
+          # Data directory
           - name: postgres-storage
             mountPath: /var/lib/postgresql/data
         resources:
@@ -57,7 +57,7 @@ spec:
             cpu: "250m"
             memory: "256Mi"
       volumes:
-            # Bind the storage box hook onto cluster PVC manifest asset
+            # PVC
             - name: postgres-storage
               persistentVolumeClaim:
                 claimName: postgres-pvc
@@ -65,7 +65,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-db-service  # Matches DB host variable inside backend deployment config
+  name: postgres-db-service  # Referenced by SPRING_DATASOURCE_URL
   labels:
     app: nexus-rtc
     component: database

@@ -2,26 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { Sidebar } from './Sidebar';
 import { useChannels } from '../hooks/useChannels';
-import { type Channel, channelService, type ChatMessagePayload } from '../services/channelService'; // Clean, unified imports
+import { type Channel, channelService, type ChatMessagePayload } from '../services/channelService';
 import api from '../api/axios';
+import { WS_URL } from '../config/urls';
 
 interface MainChatProps {
   username: string;
-  userId: number; // Synchronized user identity primary key
+  userId: number;
 }
 
 export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
-  // 1. STATE CONFIGURATION: Uses the single, global schema definition natively
   const [messages, setMessages] = useState<ChatMessagePayload[]>([]);
   const [typedMessage, setTypedMessage] = useState('');
   const [connected, setConnected] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Temporary local message state hook to capture background events, register a listener for the custom app-push-notification window trigger, and map a floating alert modal right above your textbox layout
+  // Snackbar for messages in other channels, fed by the app-push-notification window event.
   const [activeNotification, setActiveNotification] = useState<ChatMessagePayload | null>(null);
 
-  // Hooking our automated multi-channel controllers
+  // Channel list and membership state.
   const {
     channels,
     userChannels,
@@ -35,19 +35,19 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
   const stompClientRef = useRef<Client | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll message board smoothly on new arrivals
+  // Scroll to the newest message.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 2. REAL-TIME ROUTING TUNNEL: Reboots WebSocket subscriptions on channel switching
+  // KNOWN ISSUE (R1): opens a second STOMP connection (useChat has its own) and rebuilds it on every
+  // channel switch. Should share one connection and swap subscriptions.
   useEffect(() => {
     if (!activeChannel) return;
 
     let isMounted = true;
-    setMessages([]); // Reset message board view state when navigating into a new room space
+    setMessages([]); // Clear messages when switching channels
 
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
     const token = localStorage.getItem('token');
     const client = new Client({
       brokerURL: WS_URL,
@@ -56,16 +56,17 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
       },
       reconnectDelay: 5000,
       debug: (str) => {
-        // Only log protocol noise if running in local developer mode
+        // KNOWN ISSUE: import.meta.env.NODE_ENV is undefined in Vite, so this never logs. Use import.meta.env.DEV.
         if (import.meta.env.NODE_ENV === 'development') {
           console.log(`[STOMP-PROTOCOL] ${str}`);
         }
       },
     });
 
-    // Step A: Execute asynchronous historical extraction out of PostgreSQL
+    // Load history, then connect. KNOWN ISSUE (R2): history isn't re-fetched after a reconnect, so
+    // messages sent while the socket was down don't appear until a channel switch or reload.
     const loadRoomHistoryAndConnect = async () => {
-      // PROTECTION GUARD: Abort instantly if no channel is selected yet!
+      // Nothing to load without a selected channel.
       if (!activeChannel || !activeChannel.id) {
         console.log("[CHANNELS-GATE] No channel selected on boot. Standing by in placeholder state.");
         return;
@@ -76,14 +77,13 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
         const historyData: ChatMessagePayload[] = await channelService.getChannelHistory(activeChannel.id, userId);
 
         if (isMounted) {
-          // ✅ Optimized: Direct assignment with zero mapping conversion runtime overhead!
           setMessages(historyData);
         }
       } catch (err) {
         console.error('Failed to pre-load channel messaging history arrays:', err);
       }
 
-      // Step B: Once records populate your UI view state, open the live network bridge tunnel
+      // Connect after history has loaded.
       if (!isMounted) return;
 
       client.onConnect = () => {
@@ -94,7 +94,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
         setConnected(true);
         console.log(`STOMP node synchronized securely. Subscribing to channel path: ${activeChannel.id}`);
 
-        // Subscribe to the channel-isolated message pipeline we built in the ChatController
+        // Live messages for this channel.
         client.subscribe(`/topic/channels/${activeChannel.id}`, (frame) => {
           const payload: ChatMessagePayload = JSON.parse(frame.body);
           if (isMounted) {
@@ -102,7 +102,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
           }
         });
 
-        // Signal arrival context frame into the channel space network loop
+        // Announce the join. KNOWN ISSUE (R7): sent on every connect and channel switch.
         client.publish({
           destination: `/app/chat.addUser/${activeChannel.id}`,
           body: JSON.stringify({
@@ -122,10 +122,9 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
       stompClientRef.current = client;
     };
 
-    // Trigger the unified loading pipeline execution loop
     loadRoomHistoryAndConnect();
 
-    // Clean up hook: Tears down active tunnel subscriptions before mapping user into next room selection
+    // Disconnect when the channel changes or the component unmounts.
     return () => {
       isMounted = false;
       if (client.active) {
@@ -134,18 +133,18 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     };
   }, [activeChannel, username, userId]);
 
-  // 🚀 INTERCEPT BACKGROUND EVENT BROADCASTS CHANNELS
+  // Show a snackbar for notifications from other channels.
   useEffect(() => {
     const handleIncomingNotification = (e: Event) => {
       const customEvent = e as CustomEvent<ChatMessagePayload>;
       const notificationData = customEvent.detail;
 
-      // UX SANITY CHECK: Only trigger an alert badge if the message belongs to a DIFFERENT room channel!
+      // Ignore notifications for the channel being viewed.
       if (activeChannel && notificationData.channelId !== activeChannel.id) {
         console.log(`[UI-NOTIFICATION] Displaying sliding snackbar for out-of-channel message: ${notificationData.content}`);
         setActiveNotification(notificationData);
 
-        // Automatically hide the sliding alert box after 4 seconds of display visibility
+        // Auto-hide after 4s. KNOWN ISSUE: the timer isn't cleared, so an older timeout can hide a newer notification.
         setTimeout(() => {
           setActiveNotification(null);
         }, 4000);
@@ -156,7 +155,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     return () => window.removeEventListener('app-push-notification', handleIncomingNotification);
   }, [activeChannel]);
 
-  // // AUTOMATED SLIDING TIMER DISMISSAL OVERRIDE
+  // Not enabled: this version fixes the timer issue above by clearing the previous timeout.
   // useEffect(() => {
   //   if (activeNotification) {
   //     const timer = setTimeout(() => {
@@ -166,7 +165,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
   //   }
   // }, [activeNotification]);
 
-  // 3. SUBMIT CHAT FRAME OPERATION
+  // Send a text message.
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!typedMessage.trim() || !stompClientRef.current?.connected || !activeChannel) return;
@@ -186,7 +185,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
     setTypedMessage('');
   };
 
-  // 🚀 ASYNCHRONOUS MULTIPART FILE UPLOAD ENGINE (REST -> WEBSOCKET ATTACHMENT)
+  // Upload a file over REST, then send a chat message that references it.
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeChannel || !stompClientRef.current?.connected) return;
@@ -197,7 +196,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
     try {
       setUploading(true);
-      // 1. Fire the file over a standard HTTP REST Multipart POST request directly into AttachmentController
+      // 1. Upload the file (multipart POST).
       const response = await api.post(`/attachments/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -206,7 +205,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
       const { attachmentPath, attachmentType } = response.data;
 
-      // 2. Wrap the resulting S3 unique keys inside an instant STOMP message frame notice payload
+      // 2. Build a chat message containing the returned object key.
       const chatFrame: ChatMessagePayload = {
         channelId: activeChannel.id,
         sender: username,
@@ -216,7 +215,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
         attachmentType: attachmentType
       };
 
-      // 3. Broadcast the completion notice out across your channel WebSocket broker
+      // 3. Send it to the channel.
       stompClientRef.current.publish({
         destination: `/app/chat.sendMessage/${activeChannel.id}`,
         body: JSON.stringify(chatFrame),
@@ -226,21 +225,22 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
       console.error("Multimedia stream ingress failed entirely:", err);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input element track
+      if (fileInputRef.current) fileInputRef.current.value = ''; // Allow re-selecting the same file
     }
   };
 
-  // 4. SECURITY INTERCEPTOR: Automatically registers user onto roster if they click an unjoined room
+  // Selecting a channel you haven't joined joins it first. This is UX only; access control must be
+  // enforced on the server (S1, S4).
   const handleChannelSelection = async (targetChannel: Channel) => {
     const alreadyMember = userChannels.some((c) => c.id === targetChannel.id);
 
     if (!alreadyMember) {
       console.log(`[SECURITY-GATE] User is not a member of channel ${targetChannel.id}. Synchronizing roster first...`);
-      // 🛡️ CRITICAL: Await the database registration pass COMPLETELY before updating active state!
+      // Wait for the join so the history request passes the membership check.
       await joinTargetChannel(targetChannel.id);
     }
 
-    // Now that the member link is written to PostgreSQL, update active viewport securely
+    // Then switch to the channel.
     setActiveChannel(targetChannel);
   };
 
@@ -255,7 +255,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
 
   return (
     <div className="flex h-screen w-screen bg-[var(--theme-bg)] text-[var(--theme-text)] overflow-hidden font-sans">
-      {/* Left Column Component: Docked Navigation Sidebar Workspace */}
+      {/* Sidebar */}
       <Sidebar
         channels={channels}
         userChannels={userChannels}
@@ -266,12 +266,12 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
         onDeleteChannel={removeChannel}
       />
 
-      {/* Right Column Component: Main Chat Window Layout */}
+      {/* Chat panel */}
       <div className="flex-1 flex flex-col h-full bg-[var(--theme-bg)]">
-        {/* Top Header Bar */}
+        {/* Header */}
         <div className="h-14 border-b border-[var(--theme-border)] px-6 flex items-center justify-between bg-[var(--theme-card)]/40">
 
-          {/* Left Side: Room Name + Integrated Connection Status Light */}
+          {/* Channel name and connection status */}
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1.5">
               <span className="text-[var(--theme-text-muted)] font-mono text-xl">#</span>
@@ -286,17 +286,17 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
             </div>
           </div>
 
-          {/* Right Side: Unified call/logout control dock. */}
+          {/* Call and logout buttons */}
           <div className="bg-[var(--theme-card)]/90 border border-[var(--theme-border)]/80 px-4 py-2 rounded-xl shadow-2xl flex items-center space-x-4 backdrop-blur-md">
             <button
               onClick={() => {
-                // Fires custom window event to bridge call commands directly to useChat hooks inside pages/Chat.tsx
+                // Handled in pages/Chat.tsx. KNOWN ISSUE (C2): the target is a hardcoded placeholder, not a channel member.
                 window.dispatchEvent(new CustomEvent('initiate-call', { detail: { target: 'target-user' } }));
               }}
               className="flex items-center space-x-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors cursor-pointer"
               title="Initiate Real-Time Video Call Stream"
             >
-              {/* Lucide Video Icon */}
+              {/* Video icon */}
               <svg xmlns="http://w3.org" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
               <span>Call Host</span>
             </button>
@@ -311,14 +311,14 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
               className="flex items-center space-x-1.5 text-xs text-[var(--theme-text-muted)] hover:text-rose-400 font-semibold transition-colors cursor-pointer"
               title="Sign Out of Session"
             >
-              {/* Lucide LogOut */}
+              {/* Logout icon */}
               <svg xmlns="http://w3.org" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
             </button>
           </div>
         </div>
 
 
-        {/* Scrolling Chat Timeline Log Feed */}
+        {/* Messages. KNOWN ISSUE: keyed by array index; use the message id. */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[var(--theme-timeline-bg-alpha)] scrollbar-thin">
           {messages.map((msg, index) => {
             if (msg.type === 'JOIN') {
@@ -333,7 +333,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
               <div key={index} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} w-full max-w-full`}>
                 <span className="text-[10px] text-[var(--theme-msg-sender)] font-medium px-1 mb-0.5">{msg.sender}</span>
 
-                {/* Explicit width control blocks horizontal textBox leaks */}
+                {/* Max width keeps long messages from overflowing */}
                 <div className={`w-auto max-w-[85%] md:max-w-md px-4 py-2.5 rounded-2xl text-sm shadow-md break-all flex flex-col space-y-1.5 ${
                   isMe 
                     ? 'bg-indigo-600 text-white rounded-tr-none' 
@@ -341,7 +341,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
                 }`}>
                   <span>{msg.content}</span>
 
-                  {/* MULTIMEDIA ATTACHMENT PREVIEW COMPONENT */}
+                  {/* Attachment preview */}
                   {msg.attachmentUrl && (
                     <div className="mt-1 p-1 bg-[var(--theme-attachment-bg-alpha)] rounded-lg border border-[var(--theme-border)]/60 overflow-hidden w-full max-w-full">
                       {msg.attachmentType?.startsWith('image/') ? (
@@ -374,7 +374,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* FLOATING PUSH NOTIFICATION SNACKBAR PANEL ELEMENT */}
+        {/* Notification snackbar */}
         {activeNotification && (
           <div className="mx-4 mb-2 p-3 bg-[var(--theme-card)]/95 border border-indigo-500/40 rounded-xl shadow-2xl flex items-center justify-between animate-slide-up backdrop-blur-md">
             <div className="flex items-center space-x-3 truncate">
@@ -393,11 +393,11 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
           </div>
         )}
 
-        {/* CHAT INPUT FOOTER WITH INTEGRATED ATTACHMENT CLIP TRAY */}
+        {/* Message input and attach button */}
         <div className="p-4 bg-[var(--theme-card)]/20 border-t border-[var(--theme-card)] w-full">
           <form onSubmit={handleSendMessage} className="w-full flex space-x-2 items-center">
 
-            {/* Hidden native input lane */}
+            {/* Hidden file input. accept= is advisory only; the server must validate types (S7). */}
             <input
               type="file"
               ref={fileInputRef}
@@ -406,7 +406,7 @@ export const MainChat: React.FC<MainChatProps> = ({ username, userId }) => {
               accept="image/*,application/pdf,text/plain"
             />
 
-            {/* Paperclip upload trigger button */}
+            {/* Attach button */}
             <button
               type="button"
               disabled={!connected || uploading}

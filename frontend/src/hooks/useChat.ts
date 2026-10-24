@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import { jwtDecode } from 'jwt-decode';
+import { WS_URL } from '../config/urls';
 
 const getInitialUser = () => {
     const token = localStorage.getItem('token');
@@ -49,10 +50,10 @@ export const useChat = () => {
     }, [])
 
     const initializeLocalHardwareStream = useCallback(async (): Promise<MediaStream> => {
-        // 1. Get local media streams (audio, video)
+        // Request camera and microphone.
         console.log("[APP-TELEMETRY] 🎙️ Requested local hardware media access via navigator.mediaDevices.getUserMedia...");
 
-        // High-Utility Security Check
+        // getUserMedia only exists in secure contexts (HTTPS or localhost).
         if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
             throw new Error(
                 "SECURITY BLOCK: Browser has stripped 'navigator.mediaDevices' because the app is running over insecure HTTP/WS (*.local domains)."
@@ -61,8 +62,7 @@ export const useChat = () => {
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
-        // 2. Disable each audio and video track
-        // START MUTED: Disable tracks immediately
+        // Start with mic and camera disabled.
         stream.getAudioTracks().forEach(track => {
             track.enabled = false
             console.log("[APP-TELEMETRY] ⚠️ Privacy Guard Triggered: Disabling local audio tracks locally (track.enabled = false).");
@@ -72,7 +72,7 @@ export const useChat = () => {
             console.log("[APP-TELEMETRY] ⚠️ Privacy Guard Triggered: Disabling local video tracks locally (track.enabled = false).");
         });
 
-        // 3. Assign stream to local DOM element.
+        // Expose the stream for the local preview.
         console.log("[APP-TELEMETRY] 🎬 Local media stream initialized and safely zeroed out at the hardware boundary.");
         setLocalStream(stream);
         localStreamRef.current = stream;
@@ -80,6 +80,8 @@ export const useChat = () => {
         return stream;
     }, [])
 
+    // KNOWN ISSUE (C1, C6): no ring/accept step, and a rejected getUserMedia leaves isCalling stuck true.
+    // KNOWN ISSUE (S9, C7): TURN credentials are static and compiled into the client bundle.
     const startCall = useCallback(async (receiver: string) => {
         setIsCalling(true);
 
@@ -100,25 +102,24 @@ export const useChat = () => {
 
         peerConnectionRef.current = peerConnection;
 
-        // Add tracks to the connections
-        // The stream is passed the source of the media for each track to be synced with each other.
+        // Send local audio and video tracks.
         stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
 
-        // Listen for the other person's video
+        // Remote media.
         peerConnection.ontrack = (event) => {
             console.log("[APP-TELEMETRY] 🎥 Remote track received!", event.streams[0]);
             setRemoteStream(event.streams[0]);
             remoteStreamRef.current = event.streams[0];
         };
 
-        // Listen for network candidates
+        // Send our ICE candidates to the peer.
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 sendSignalingMessage("CANDIDATE", event.candidate, receiver);
             }
         };
 
-        // Create the Offer
+        // Create and send the offer.
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -134,15 +135,16 @@ export const useChat = () => {
             screenStream.getTracks().forEach(t => t.stop());
             screenStreamRef.current = null;
 
-            // 2. Update state engine to signal UI iconography to reset
+            // 2. Reset screen-share UI state.
             setIsScreenSharing(false);
 
-            // 3. Fetch native fallback user media tracks
+            // 3. Reacquire the camera. KNOWN ISSUE (C5): this also opens a new audio track that is never used
+            // or stopped, while the audio sender still holds the track that was stopped when sharing began.
             const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             const videoTrack = cameraStream.getVideoTracks()[0];
 
-            // 4. CRITICAL STATE GUARD: Enforce the pre-existing privacy boundary context
-            // If the video was explicitly off, zero out the track to prevent accidental leaks
+            // 4. Restore the camera on/off state. KNOWN ISSUE (C5): isVideoOff is captured by the onended
+            // closure and is always true here, because starting a share sets it to true.
             if (isVideoOff) {
                 videoTrack.enabled = false;
                 console.log("[APP-TELEMETRY] 🔒 Privacy Guard Preserved: Fallback camera track initialized as DISABLED");
@@ -151,13 +153,13 @@ export const useChat = () => {
                 console.log("[APP-TELEMETRY] 📸 Fallback camera track initialized as ENABLED");
             }
 
-            // 5. Hot-swap the media context over the active WebRTC peer connection mid-flight
+            // 5. Swap the camera track back in (no renegotiation needed).
             const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === 'video');
             if (sender) {
                 await sender.replaceTrack(videoTrack);
             }
 
-            // 6. Update the local rendering stream layer with our privacy-aware stream
+            // 6. Update the local preview.
             setLocalStream(cameraStream);
             localStreamRef.current = cameraStream;
         }
@@ -174,11 +176,11 @@ export const useChat = () => {
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 screenStreamRef.current = screenStream;
 
-                // 2. Signal to the UI that presentation mode (UI button) is active
+                // 2. Update UI state.
                 setIsVideoOff(true);
                 setIsScreenSharing(true);
 
-                // 3. Replace Track (Senior Flex: replaceTrack is seamless)
+                // 3. Swap the screen track in with replaceTrack (no SDP renegotiation needed).
                 const videoTrack = screenStream.getVideoTracks()[0];
                 const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
 
@@ -186,12 +188,12 @@ export const useChat = () => {
                     sender.replaceTrack(videoTrack);
                 }
 
-                // 4. Handle user stopping share via browser UI
+                // 4. Restore the camera if the user stops sharing from the browser's own UI.
                 videoTrack.onended = () => stopScreenShare();
 
                 setLocalStream(prevStream => {
-                    if (prevStream) prevStream.getTracks().forEach(track => track.stop());  // Stop camera stream first
-                    return screenStream;  // Then update UI to show screen in small box
+                    if (prevStream) prevStream.getTracks().forEach(track => track.stop());  // KNOWN ISSUE (C5): also stops the audio track, so the peer loses your audio
+                    return screenStream;  // Show the screen in the local preview
                 });
                 localStreamRef.current = screenStream;
 
@@ -207,28 +209,29 @@ export const useChat = () => {
     const endCall = useCallback(() => {
         console.log("[APP-TELEMETRY] 🧼 Initiating local call teardown and broadcasting HANGUP...");
 
-        // 1. Publish straight to the topic queue, completely bypassing the /app controller mapping prefix
+        // 1. Send HANGUP via /app/call.hangup. KNOWN ISSUE (C3): it is broadcast to everyone with no call
+        // id, so every client in a call ends theirs.
         const stompClient = stompClientRef.current;
         if (stompClient && stompClient.connected) {
             stompClient.publish({
                 destination: "/app/call.hangup",
                 body: JSON.stringify({
                     type: "HANGUP",
-                    sender: currentUser, // Ensure your tracking variable passes the sender name
+                    sender: currentUser, // Ignored: the server sets sender from the Principal
                     receiver: "peer",
                     data: JSON.stringify({ status: "ended" })
                 })
             });
         }
 
-        // 2. Clear out the localized networking instance
+        // 2. Close the peer connection.
         const peerConnection = peerConnectionRef.current
         if (peerConnection) {
             peerConnection.close();
             peerConnectionRef.current = null;
         }
 
-        // 3. Clear out media tracking pointers to turn off webcams
+        // 3. Stop local and remote tracks (turns the camera off).
         setLocalStream(prevStream => {
             if (prevStream) prevStream.getTracks().forEach(track => track.stop());
             return null;
@@ -261,7 +264,7 @@ export const useChat = () => {
     }, [localStream, isMuted])
 
     const toggleVideo = useCallback(async () => {
-        // MUTUAL EXCLUSION: If actively screen-sharing, stop it first before activating the camera
+        // Turning the camera on stops any active screen share first.
         if (isScreenSharing) {
             console.log("[APP-TELEMETRY] 💻 Screen-share active. Executing automated shutdown loop prior to webcam takeover...");
             await stopScreenShare();
@@ -277,15 +280,13 @@ export const useChat = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
 
-        const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'; // Standard WebSocket URL (localhost:8080)
-
         const client = new Client({
             brokerURL: WS_URL,
             connectHeaders: {
                 Authorization: `Bearer ${token}`
             },
             debug: (str) => {
-                // Only log protocol noise if running in local developer mode
+                // KNOWN ISSUE: import.meta.env.NODE_ENV is undefined in Vite, so this never logs. Use import.meta.env.DEV.
                 if (import.meta.env.NODE_ENV === 'development') {
                     console.log(`[STOMP-PROTOCOL] ${str}`);
                 }
@@ -296,23 +297,25 @@ export const useChat = () => {
                 console.log(`[APP-TELEMETRY] 🔌 Attempting full-duplex WebSocket connection to: ${WS_URL}`);
                 console.log('[APP-TELEMETRY] ✅ STOMP connection successfully established with Principal Identity.');
                 console.log('[APP-TELEMETRY] 📡 Subscribed to global broadcast signaling hub: /topic/public');
+                // KNOWN ISSUE (C1): every client receives every signal here. Any OFFER from another user starts
+                // the camera and auto-answers; `receiver` is never checked.
                 client.subscribe('/topic/public', async (message) => {
                     const payload = JSON.parse(message.body);
-                    const freshToken = localStorage.getItem('token');  // Get a FRESH identity for the comparison
+                    const freshToken = localStorage.getItem('token');
                     const myId = freshToken ? (jwtDecode(freshToken) as any).sub : null;
 
-                    // Log EVERY signaling packet before any 'if' statements
+                    // Debug logging.
                     if (payload.type) {
                         console.log(`[APP-TELEMETRY] 🔍 RAW SIGNAL: ${payload.type} from ${payload.sender} (Me: ${currentUser})`);
                     }
 
-                    // CHAT
+                    // Messages without a type are chat messages.
                     if (!payload.type) {
                         setMessages((prev) => [...prev, payload]);
                         return;
                     }
 
-                    // Use the fresh ID to filter
+                    // Ignore our own signals.
                     if (payload.sender === myId) {
                         console.log(`[APP-TELEMETRY] 🔍 Ignoring self-broadcast: ${payload.type} from ${myId}`);
                         return;
@@ -357,7 +360,7 @@ export const useChat = () => {
 
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(payload.data)));
 
-                        // Process queue
+                        // Apply ICE candidates that arrived before the remote description.
                         while (iceCandidateQueue.current.length > 0) {
                             const cand = iceCandidateQueue.current.shift();
                             if (cand) await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
@@ -437,15 +440,15 @@ export const useChat = () => {
                     }
                 });
 
-                // PUSH NOTIFICATION CLIENT TRACKER
-                // Connects natively to the private user-isolated destination queue engineered in Spring Boot
+                // Notifications for this user. KNOWN ISSUE (S4): the destination is keyed by username and isn't
+                // access-checked, so any client can subscribe to another user's notifications.
                 if (currentUser) {
                     console.log(`[NOTIF-CLIENT] Registering incoming push alert channel listener for: ${currentUser}`);
                     client.subscribe(`/queue/notifications/${currentUser}`, (message) => {
                         const pushNotification = JSON.parse(message.body);
                         console.log('[NOTIF-CLIENT] 🔔 Background push notification event intercepted:', pushNotification);
 
-                        // Fires a global custom DOM event to dispatch snackbar warnings onto MainChat view layers
+                        // MainChat listens for this event to show the snackbar.
                         window.dispatchEvent(new CustomEvent('app-push-notification', { detail: pushNotification }));
                     });
                 }

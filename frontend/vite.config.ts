@@ -8,4 +8,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // Dev server: proxy /api and /ws to the backend so the app uses the same
+  // same-origin URLs as the Kubernetes ingress and the Compose gateway.
+  server: {
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ws': { target: 'http://localhost:8080', ws: true, changeOrigin: true },
+    },
+  },
 })

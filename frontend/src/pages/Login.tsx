@@ -15,14 +15,14 @@ const Login: React.FC = () => {
             const token = response.data.token;
             localStorage.setItem('token', token);
 
-            // Decode the token payload to fetch the logged-in user profile attributes
+            // Read the username and user id from the JWT claims.
             const decoded: any = jwtDecode(token);
 
-            // Store the user identity context attributes cleanly for sidebar consumption
             localStorage.setItem('username', decoded.sub);
 
-            // If JWT payload doesn't map an 'id' yet, fall back to a mock identity counter 
-            // or match against a custom claim. (Assume 'userId' or default integer context)
+            // KNOWN ISSUE (S2): login itself is enforced by the server; this only matters after a successful
+            // login. The backend always sets the userId claim today, but if it were ever missing this would
+            // store the string "undefined" and Chat.tsx would silently use user id 1. Fail loudly instead.
             const userId = decoded.userId;
             if (!userId) {
                 console.error("Fatal: Security Token missing required contextual metadata assertions.");

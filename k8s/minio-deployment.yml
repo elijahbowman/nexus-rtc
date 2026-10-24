@@ -34,20 +34,20 @@ spec:
             - containerPort: 9001
               name: web-console
           env:
-            # Public Root Username handle pulled from core ConfigMap
+            # Root user from the ConfigMap
             - name: MINIO_ROOT_USER
               valueFrom:
                 configMapKeyRef:
                   name: nexus-rtc-app-config
                   key: AWS_ACCESS_KEY_ID
-            # Sensitive Root Password token pulled from cluster Secrets
+            # Root password from the Secret
             - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: nexus-rtc-app-secrets
                   key: minio-root-password
           volumeMounts:
-            # Mounts the permanent 5Gi file-system slice to prevent data drop anomalies
+            # Persistent volume for object data
             - name: minio-storage
               mountPath: /data
           resources:

@@ -18,7 +18,7 @@ public class StorageFacade {
     private final MinioClient minioClient;
     private final String bucketName;
 
-    // Inject persistent Docker environment keys cleanly via the constructor framework
+    // Credentials and endpoint come from environment variables (see application.yml).
     public StorageFacade(
             @Value("${minio.url}") String url,
             @Value("${aws.access.key.id}") String accessKey,
@@ -33,8 +33,7 @@ public class StorageFacade {
     }
 
     /**
-     * Core Facade Upload Action: Processes an incoming multipart stream
-     * and maps it to a unique object identifier key inside the MinIO bucket layer.
+     * Uploads a multipart file and returns its object key.
      */
     public String uploadFile(MultipartFile file) {
         if (file.isEmpty()) {
@@ -42,7 +41,7 @@ public class StorageFacade {
         }
 
         try {
-            // Generate a secure, cryptographically random object key to avoid namespace collisions
+            // UUID prefix avoids collisions. KNOWN ISSUE (S7): the original filename is appended unsanitized.
             String uniqueFileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
 
             try (InputStream inputStream = file.getInputStream()) {
@@ -56,7 +55,7 @@ public class StorageFacade {
                 );
             }
 
-            // Return the unique file key path wrapper to persist inside PostgreSQL records
+            // The key is stored on the chat message as attachmentPath.
             return uniqueFileName;
 
         } catch (Exception e) {
@@ -65,8 +64,9 @@ public class StorageFacade {
     }
 
     /**
-     * Generates a secure, temporary, pre-signed URL to allow front-end clients
-     * to safely stream down files without making your S3 bucket completely public.
+     * Generates a time-limited presigned GET URL for an object.
+     * Note: the bucket is currently public (k8s/minio-init-job.yml, S7), so this doesn't restrict access
+     * yet. It also presigns any key it is given; callers must check authorization first.
      */
     public String getPresignedUrl(String objectKey) {
         try {
@@ -75,7 +75,7 @@ public class StorageFacade {
                             .method(Method.GET)
                             .bucket(bucketName)
                             .object(objectKey)
-                            .expiry(2, TimeUnit.HOURS) // Token expires in 2 hours for security compliance
+                            .expiry(2, TimeUnit.HOURS) // 2-hour expiry
                             .build()
             );
         } catch (Exception e) {
