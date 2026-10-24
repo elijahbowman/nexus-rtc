@@ -21,20 +21,21 @@ public class AttachmentController {
     }
 
     /**
-     * 🚀 HTTP MULTIPART FILE UPLOAD ENDPOINT
-     * Receives raw media chunks, pipes them to MinIO, and returns the tracking keys.
+     * Uploads a file to object storage and returns its key and content type.
+     * KNOWN ISSUE (S7): no content-type allowlist, no multipart size config (Spring's 1 MB default
+     * applies), the client-supplied Content-Type is stored as-is, and the upload isn't recorded
+     * against its owner. The 500 response also returns the raw exception message.
      */
     @PostMapping("/upload")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<?> uploadAttachment(@RequestParam("file") MultipartFile file) {
         try {
-            // 1. Hand the binary stream to the Storage Facade layer to persist inside MinIO
+            // Store the file.
             String uniqueFileKey = storageFacade.uploadFile(file);
 
-            // 2. Extract content metadata to help the React frontend determine layout configurations
+            // The frontend uses the content type to decide how to render the attachment.
             String contentType = file.getContentType();
 
-            // 3. Package metadata response variables
             Map<String, String> response = new HashMap<>();
             response.put("attachmentPath", uniqueFileKey);
             response.put("attachmentType", contentType);

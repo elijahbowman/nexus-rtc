@@ -1,0 +1,177 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="NexusRTC AWS" id="NexusRTC AWS">
+    <mxGraphModel dx="1149" dy="1372" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" background="light-dark(#020618,#020618)" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="region" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="AWS Region" vertex="1">
+          <mxGeometry height="660" width="940" x="30" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="VPC, across 2+ Availability Zones" vertex="1">
+          <mxGeometry height="590" width="620" x="180" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="public" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="Public subnets" vertex="1">
+          <mxGeometry height="160" width="580" x="200" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="app" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="Private subnets (app)" vertex="1">
+          <mxGeometry height="160" width="580" x="200" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="data" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="Private subnets (data)" vertex="1">
+          <mxGeometry height="170" width="580" x="200" y="595" as="geometry" />
+        </mxCell>
+        <mxCell id="support" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#45556C,#45556C);fontColor=light-dark(#CAD5E2,#CAD5E2);dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;" value="Supporting&lt;br&gt;services" vertex="1">
+          <mxGeometry height="345" width="125" x="825" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#45556C,#45556C);strokeColor=light-dark(#45556C,#45556C);gradientColor=none;shape=mxgraph.aws4.users;verticalLabelPosition=top;verticalAlign=bottom;labelPosition=center;align=center;" value="Users" vertex="1">
+          <mxGeometry height="78" width="78" x="400" as="geometry" />
+        </mxCell>
+        <mxCell id="route53" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="Route 53" vertex="1">
+          <mxGeometry height="60" width="60" x="760" as="geometry" />
+        </mxCell>
+        <mxCell id="waf" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="WAF" vertex="1">
+          <mxGeometry height="60" width="60" x="310" y="279" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#45556C,#45556C);strokeColor=light-dark(#45556C,#45556C);gradientColor=none;shape=mxgraph.aws4.application_load_balancer;verticalLabelPosition=middle;verticalAlign=middle;labelPosition=right;align=left;spacingLeft=6;" value="ALB&lt;br&gt;TLS via ACM" vertex="1">
+          <mxGeometry height="78" width="78" x="400" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="turn" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;verticalLabelPosition=middle;verticalAlign=middle;labelPosition=right;align=left;spacingLeft=6;" value="coturn on EC2&lt;br&gt;Elastic IPs" vertex="1">
+          <mxGeometry height="78" width="78" x="600" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="eks" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks;verticalLabelPosition=middle;verticalAlign=middle;labelPosition=right;align=left;spacingLeft=6;" value="EKS&lt;br&gt;frontend + backend pods" vertex="1">
+          <mxGeometry height="78" width="78" x="400" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="aurora" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="Aurora PostgreSQL&lt;br&gt;Multi-AZ, auto failover" vertex="1">
+          <mxGeometry height="78" width="78" x="380" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="ElastiCache for Redis&lt;br&gt;pub/sub, Multi-AZ" vertex="1">
+          <mxGeometry height="78" width="78" x="580" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="S3&lt;br&gt;11 nines durability" vertex="1">
+          <mxGeometry height="78" width="78" x="60" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="ecr" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecr;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="ECR" vertex="1">
+          <mxGeometry height="60" width="60" x="857.5" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="Secrets Manager" vertex="1">
+          <mxGeometry height="60" width="60" x="857.5" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="cw" parent="1" style="sketch=0;outlineConnect=0;dashed=0;html=1;fontSize=12;fontStyle=0;aspect=fixed;align=center;fontColor=light-dark(#CAD5E2,#CAD5E2);fillColor=light-dark(#1D293D,#1D293D);strokeColor=light-dark(#45556C,#45556C);shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch_2;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;" value="CloudWatch" vertex="1">
+          <mxGeometry height="60" width="60" x="857.5" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=light-dark(#CAD5E2,#CAD5E2);" value="Legend" vertex="1">
+          <mxGeometry height="20" width="120" x="30" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="lg0s" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="30" y="876" as="geometry" />
+        </mxCell>
+        <mxCell id="lg0t" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="90" y="876" as="geometry" />
+        </mxCell>
+        <mxCell id="lg0x" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=light-dark(#CAD5E2,#CAD5E2);" value="User traffic" vertex="1">
+          <mxGeometry height="20" width="320" x="100" y="855" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1s" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="30" y="898" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1t" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="90" y="898" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1x" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=light-dark(#CAD5E2,#CAD5E2);" value="Service to service" vertex="1">
+          <mxGeometry height="20" width="320" x="100" y="877" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2s" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="30" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2t" parent="1" style="text;strokeColor=none;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="1" width="1" x="90" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2x" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=light-dark(#CAD5E2,#CAD5E2);" value="Direct to TURN or S3; WAF attachment" vertex="1">
+          <mxGeometry height="20" width="320" x="100" y="899" as="geometry" />
+        </mxCell>
+        <mxCell id="e0" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#CAD5E2,#CAD5E2);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=1.0000;exitY=0.3205;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.4167;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=6 4;" target="route53" value="DNS">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#CAD5E2,#CAD5E2);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.5000;exitY=1.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;" target="alb" value="HTTPS + WSS">
+          <mxGeometry relative="1" x="-0.56" as="geometry">
+            <mxPoint x="44" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#62748E,#62748E);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=1.0000;exitY=0.7051;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=6 4;startArrow=classic;startFill=1;" target="turn" value="TURN relay (UDP)&lt;br&gt;when P2P fails">
+          <mxGeometry relative="1" x="0.24" as="geometry">
+            <mxPoint x="62" as="offset" />
+            <Array as="points">
+              <mxPoint x="639" y="55" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#62748E,#62748E);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.0000;exitY=0.5000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=6 4;" target="s3" value="presigned&lt;br&gt;downloads">
+          <mxGeometry relative="1" x="0.2" as="geometry">
+            <mxPoint x="40" as="offset" />
+            <Array as="points">
+              <mxPoint x="99" y="39" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="waf" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#62748E,#62748E);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=1.0000;exitY=0.5000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.5000;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=6 4;endArrow=none;" target="alb" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="alb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#CAD5E2,#CAD5E2);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.5000;exitY=1.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;" target="eks" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="eks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#7C86FF,#7C86FF);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.5000;exitY=1.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;" target="aurora" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="439" y="585" />
+              <mxPoint x="419" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="eks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#7C86FF,#7C86FF);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.5000;exitY=1.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;" target="cache" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="439" y="585" />
+              <mxPoint x="619" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="eks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#7C86FF,#7C86FF);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.0000;exitY=0.5000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0000;entryY=0.5000;entryDx=0;entryDy=0;entryPerimeter=0;" target="s3" value="uploads,&lt;br&gt;presign">
+          <mxGeometry relative="1" x="-0.64" as="geometry">
+            <mxPoint y="-18" as="offset" />
+            <Array as="points">
+              <mxPoint x="160" y="489" />
+              <mxPoint x="160" y="599" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="eks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#7C86FF,#7C86FF);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=1.0000;exitY=0.1538;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.1797;entryDx=0;entryDy=0;entryPerimeter=0;" target="support" value="images, secrets,&lt;br&gt;logs and metrics">
+          <mxGeometry relative="1" x="0.46" as="geometry">
+            <mxPoint y="-18" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="lg0s" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#CAD5E2,#CAD5E2);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.0000;exitY=0.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;" target="lg0t" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="lg1s" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#7C86FF,#7C86FF);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.0000;exitY=0.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;" target="lg1t" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="lg2s" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=light-dark(#62748E,#62748E);fontColor=light-dark(#CAD5E2,#CAD5E2);labelBackgroundColor=light-dark(#020618,#020618);exitX=0.0000;exitY=0.0000;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0000;entryY=0.0000;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=6 4;endArrow=none;" target="lg2t" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -9,10 +9,12 @@ pipeline {
     environment {
         PATH             = "/usr/local/bin:${env.PATH}"
         REGISTRY_TAG     = "latest"
+        // KNOWN ISSUE (P1): the manifests and deployments are named nexus-rtc-*, so these images are never
+        // used and the rollout commands below target deployments that don't exist.
         BACKEND_IMAGE    = "rtc-backend"
         FRONTEND_IMAGE   = "rtc-frontend"
         
-        // Binds the secure, internal cluster credential token from your Jenkins store
+        // Unused: kubectl uses the Jenkins pod's ServiceAccount (P6)
         CLUSTER_TOKEN    = credentials('k8s-cluster-admin-token')
     }
 
@@ -24,13 +26,13 @@ pipeline {
                 sh 'ls -la'
 
                 echo '⚡ [STAGE: CLEANUP] -> Flushing historical workspace artifacts...'
-                deleteDir() // Automatically wipes the directory structure cleanly on every run!
+                deleteDir() // Redundant with WipeWorkspace in the checkout stage
             }
         }
         stage('📥 Source Checkout') {
             steps {
                 echo '⚡ [STAGE: CHECKOUT] -> Synchronizing project repository branches...'
-                // 🚀 FORCE RE-CLONE: Instructs the Git engine to prune references and execute a clean pull from the remote server
+                // Fresh clone on every run
                 checkout([$class: 'GitSCM', 
                     branches: scm.branches,
                     extensions: scm.extensions + [[$class: 'WipeWorkspace']], 
@@ -41,7 +43,7 @@ pipeline {
                 sh 'ls -la'
             }
         }
-        // Stage 1: Parallel Testing and Code Verifications
+        // Backend tests and frontend type check, in parallel. Tests rely on Docker bridge IPs (B8).
         stage('Validate & Test') {
             parallel {
                 stage('Backend Unit & Integration Tests') {
@@ -83,10 +85,10 @@ pipeline {
             }
         }
         
-        // Stage 2: Parallel Multi-Service Production Comps
+        // Build images. KNOWN ISSUE (P4): mutable :latest tags, no registry push, no rollback.
         stage('Bake Production Images') {
             parallel {
-                // The --pull flag to forces Docker to fetch the native version of the Maven base image, which on MACOS is ARM64!
+                // --pull fetches base images for the host architecture (arm64 on Apple Silicon)
                 stage('Compile Backend Layer') {
                     steps {
                         sh "docker build --platform linux/arm64 --no-cache --pull -t ${BACKEND_IMAGE}:${REGISTRY_TAG} ./backend"
@@ -100,33 +102,33 @@ pipeline {
             }
         }
 
-        // Stage 3: Native Zero-Downtime Deployment Promotion
+        // Deploy. KNOWN ISSUE (P1): deployment/rtc-* doesn't exist. KNOWN ISSUE (P3): runs before the image scan.
         stage('Deploy to Local K8s Cluster') {
             steps {
                 script {
                     echo '⚡ [CD: PROMOTION] -> Updating cluster resources over port 80...'
                     
-                    // Uses the pod's native ServiceAccount permissions to apply resource updates instantlygmap.yml"
+                    // Uses the Jenkins pod's ServiceAccount. Only these two manifests are applied (P6).
                     sh "kubectl apply -f k8s/backend-deployment.yml"
                     sh "kubectl rollout restart deployment/rtc-backend"
 
                     sh "kubectl apply -f k8s/frontend-deployment.yml"
                     sh "kubectl rollout restart deployment/rtc-frontend"
                     
-                    // Verifies that the rolling rollout completes successfully within 90 seconds
+                    // Wait for the rollouts (no explicit --timeout)
                     sh "kubectl rollout status deployment/rtc-backend"
                     sh "kubectl rollout status deployment/rtc-frontend"
                 }
             }
         }
 
-        // Stage 4: Core Vulnerabilities Sweep
+        // Image scan. KNOWN ISSUE (P3): runs after deploy, and `|| true` means it can never fail the build.
         stage('Security Analysis: Container Image Scan') {
             steps {
                 script {
                     echo "[JENKINS-PIPELINE] Initiating automated container vulnerabilities scan via Trivy engine..."
 
-                    // Downloads a localized static binary asset straight into the temporary build container workspace!
+                    // Install the ARM64 Trivy package
                     sh 'curl -fsSL https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-ARM64.deb -o trivy.deb'
                     sh 'dpkg -i trivy.deb'
                     sh 'rm trivy.deb'

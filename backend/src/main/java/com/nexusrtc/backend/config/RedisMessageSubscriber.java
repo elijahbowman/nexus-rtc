@@ -21,7 +21,7 @@ public class RedisMessageSubscriber implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        // Satisfies formal MessageListener interface requirements if direct invocation is triggered
+        // MessageListener entry point, used if the subscriber is registered directly.
         receiveMessage(new String(message.getBody()));
     }
 
@@ -31,16 +31,18 @@ public class RedisMessageSubscriber implements MessageListener {
 
             JsonNode jsonNode = objectMapper.readTree(messageBody);
 
-            // WebRTC Signaling Catch: Checks for data/receiver attributes to route calls
+            // KNOWN ISSUE (R6): the destination is inferred from which JSON fields are present, so adding a
+            // field to a model can reroute messages. Route by Redis channel name instead.
+            // Signaling message: has data/receiver.
             if (jsonNode.has("receiver") || jsonNode.has("data")) {
                 messagingTemplate.convertAndSend("/topic/public", jsonNode);
             }
-            // Chat Channel Catch
+            // Chat message: has channelId.
             else if (jsonNode.has("channelId")) {
                 Long channelId = jsonNode.get("channelId").asLong();
                 messagingTemplate.convertAndSend("/topic/channels/" + channelId, jsonNode);
             }
-            // System Notification Catch
+            // Notification.
             else if (jsonNode.has("recipientUsername") && jsonNode.has("chatMessagePayload")) {
                 String targetUser = jsonNode.get("recipientUsername").asText();
                 JsonNode messagePayload = jsonNode.get("chatMessagePayload");

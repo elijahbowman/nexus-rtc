@@ -6,7 +6,7 @@ metadata:
     app: nexus-rtc
     component: frontend
 spec:
-  # Dual replicas guarantee UI layout rendering redundancy across cluster nodes
+  # Two replicas for availability during rollouts
   replicas: 2
   strategy:
     type: RollingUpdate
@@ -53,5 +53,5 @@ spec:
   selector:
     app: nexus-rtc
     component: frontend
-  # Shielded ClusterIP configuration to keep public traffic routed cleanly via Ingress rules
+  # Internal only; external traffic arrives through the Ingress
   type: ClusterIP

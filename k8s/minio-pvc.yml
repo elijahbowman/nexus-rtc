@@ -10,4 +10,4 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi # Larger space allocation to accommodate binary files and document streams
+      storage: 5Gi # Attachments

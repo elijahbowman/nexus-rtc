@@ -64,6 +64,6 @@ public class AuthControllerTest {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()); // Core architecture security constraint
+                .andExpect(status().isBadRequest());
     }
 }

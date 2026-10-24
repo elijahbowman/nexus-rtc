@@ -4,22 +4,22 @@ import com.nexusrtc.backend.model.Channel;
 import java.util.List;
 
 public interface ChannelService {
-    // Instantiates a brand-new chat room channel in the platform register
+    // Creates a channel and adds the creator as a member.
     Channel createChannel(String name, Long creatorId);
 
-    // Grants a specific user access rights and attaches them to a room roster
+    // Adds a user to a channel.
     void joinChannel(Long channelId, Long userId);
 
-    // Safely removes a user's entry record out of a channel space membership
+    // Removes a user from a channel.
     void leaveChannel(Long channelId, Long userId);
 
-    // Returns a clean array listing of all channels currently active in the ecosystem
+    // Returns all channels.
     List<Channel> getAllChannels();
 
-    // Sidebar Synchronization: Fetches all rooms a specific profile populates
+    // Returns the channels a user belongs to.
     List<Channel> getChannelsForUser(Long userId);
 
-    // Security Checkpoint: Assures user is verified to send/receive frames in a room
+    // Membership check. Only as trustworthy as the userId passed in (see S1).
     boolean isUserMemberOfChannel(Long channelId, Long userId);
 
     void deleteChannel(Long channelId);

@@ -15,7 +15,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional // Guarantees atomic all-or-nothing operations across database calls
+@Transactional
 @Slf4j
 public class ChannelServiceImpl implements ChannelService {
 
@@ -25,13 +25,14 @@ public class ChannelServiceImpl implements ChannelService {
 
     @Override
     public Channel createChannel(String name, Long creatorId) {
-        // Enforce standardized clean lowercase text tokens (e.g., "#General" -> "general")
+        // Normalize names, e.g. "#General" -> "general".
         String sanitizedName = name.trim().toLowerCase().replaceAll("[^a-z0-9-]", "");
 
         if (sanitizedName.length() < 2 || sanitizedName.length() > 50) {
             throw new IllegalArgumentException("Channel name must be between 2 and 50 characters alphanumeric.");
         }
 
+        // KNOWN ISSUE (B3): check-then-insert race. Concurrent creates hit the unique constraint and return 500.
         if (channelRepository.existsByName(sanitizedName)) {
             throw new IllegalStateException("Channel name '" + sanitizedName + "' already exists.");
         }
@@ -43,7 +44,7 @@ public class ChannelServiceImpl implements ChannelService {
 
         Channel savedChannel = channelRepository.save(channel);
 
-        // Senior Deliverable: The creator automatically joins the channel they just provisioned
+        // The creator joins the channel automatically.
         if (creatorId != null) {
             joinChannel(savedChannel.getId(), creatorId);
         }
@@ -57,7 +58,7 @@ public class ChannelServiceImpl implements ChannelService {
 
         if (channelMemberRepository.existsById(memberId)) {
             log.warn("User {} attempted duplicate membership submission into channel {}", userId, channelId);
-            return; // Silently skip to prevent constraint crashes
+            return; // Already a member
         }
 
         Channel channel = channelRepository.findById(channelId)
@@ -114,7 +115,7 @@ public class ChannelServiceImpl implements ChannelService {
         }
         log.info("Executing administrative cascading wipe for channel ID: {}", channelId);
 
-        // Cascades down automatically to clear all channel_members and messages via DDL constraints!
+        // Relies on ON DELETE CASCADE in the schema to remove memberships and messages.
         channelRepository.deleteById(channelId);
     }
 }

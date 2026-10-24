@@ -8,7 +8,6 @@ import java.util.List;
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    // CHANNEL-ISOLATION: Fetches the message history scoped strictly to one target chat room
-    // Ordered chronologically so frontend chat feed prints from oldest to newest text frame
+    // Full history for one channel, oldest first. KNOWN ISSUE (R4): unbounded; needs cursor pagination.
     List<ChatMessage> findByChannelIdOrderByTimestampAsc(Long channelId);
 }

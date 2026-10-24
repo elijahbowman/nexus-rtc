@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/channels")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Allows clean integration across your local k8s port-forwards
+@CrossOrigin(origins = "*") // KNOWN ISSUE (S12): conflicts with the CORS policy in WebSecurityConfig
 @Slf4j
 public class ChannelController {
 
@@ -25,7 +25,8 @@ public class ChannelController {
     private final ChatMessageRepository chatMessageRepository;
     private final StorageFacade storageFacade;
 
-    // 1. CREATE ROOM: Instantiates a fresh chat space inside the data inventory
+    // Create a channel; the creator is added as a member.
+    // KNOWN ISSUE (S1): creatorId comes from the request body, not the JWT.
     @PostMapping
     public ResponseEntity<Channel> createChannel(@RequestBody ChannelCreationRequest request) {
         log.info("REST request to instantiate channel: #{} by user ID: {}", request.getName(), request.getCreatorId());
@@ -38,14 +39,14 @@ public class ChannelController {
         }
     }
 
-    // 2. INVENTORY STREAM: Lists every active channel room registered in the ecosystem
+    // List all channels.
     @GetMapping
     public ResponseEntity<List<Channel>> getAllChannels() {
         log.info("REST request to pull all active channel inventories");
         return ResponseEntity.ok(channelService.getAllChannels());
     }
 
-    // 3. USER STREAM: Fetches all channels a specific user profile populates (Sidebar Loader)
+    // List the channels a user belongs to. KNOWN ISSUE (S1): userId is a path parameter, not the caller.
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Channel>> getChannelsForUser(@PathVariable Long userId) {
         log.info("REST request to pull active channel memberships for user ID: {}", userId);
@@ -57,7 +58,7 @@ public class ChannelController {
         }
     }
 
-    // 4. JOIN ROOM ROSTER: Establishes a binding relationship between a user and a channel
+    // Join a channel. KNOWN ISSUE (S1): userId is a request parameter, so anyone can add anyone.
     @PostMapping("/{channelId}/join")
     public ResponseEntity<Void> joinChannel(@PathVariable Long channelId, @RequestParam Long userId) {
         log.info("REST request: User ID {} attempting synchronization into channel ID {}", userId, channelId);
@@ -69,7 +70,7 @@ public class ChannelController {
         }
     }
 
-    // 5. LEAVE ROOM ROSTER: Safely severs the membership index tracking link
+    // Leave a channel. KNOWN ISSUE (S1): same as join.
     @PostMapping("/{channelId}/leave")
     public ResponseEntity<Void> leaveChannel(@PathVariable Long channelId, @RequestParam Long userId) {
         log.info("REST request: User ID {} leaving channel ID {}", userId, channelId);
@@ -81,28 +82,26 @@ public class ChannelController {
         }
     }
 
-    // 6. CHAT HISTORY STREAM: Fetches all messages chronologically scoped to one target chat room
+    // Message history for a channel. KNOWN ISSUE (R4): unpaginated.
     @GetMapping("/{channelId}/messages")
     public ResponseEntity<List<ChatMessage>> getChannelHistory(@PathVariable Long channelId, @RequestParam Long userId) {
         log.info("REST request to fetch conversation history log for channel ID: {} by user ID: {}", channelId, userId);
 
-        // Security Checkpoint: Aborts data retrieval instantly if the user is not a member of the room
+        // KNOWN ISSUE (S1): this check uses the client-supplied userId, so passing any member's id bypasses it.
+        // It must use the authenticated principal instead.
         if (!channelService.isUserMemberOfChannel(channelId, userId)) {
             log.warn("Security Alert: User {} attempted unauthorized history extraction from channel {}", userId, channelId);
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // Return a clean 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
 
-        // Pull the raw chronological logs directly out of PostgreSQL memory blocks
         List<ChatMessage> history = chatMessageRepository.findByChannelIdOrderByTimestampAsc(channelId);
 
-        // THE STORAGE TRANSITION ENGINE: Generate pre-signed URL vectors for all attachments
+        // Presign each attachment (2h expiry). See B7: URLs change on every load and expire in open tabs.
         history.forEach(message -> {
             if (message.getAttachmentPath() != null && !message.getAttachmentPath().isBlank()) {
                 try {
-                    // Resolve a secure, 2-hour pre-signed access URL straight from MinIO/S3
                     String secureUrl = storageFacade.getPresignedUrl(message.getAttachmentPath());
 
-                    // Assign it straight to the Lombok @Transient field for JSON serialization transport!
                     message.setAttachmentUrl(secureUrl);
 
                 } catch (Exception e) {
@@ -114,6 +113,7 @@ public class ChannelController {
         return ResponseEntity.ok(history);
     }
 
+    // KNOWN ISSUE (S6): no ownership or role check; any authenticated user can delete any channel.
     @DeleteMapping("/{channelId}")
     public ResponseEntity<Void> deleteChannel(@PathVariable Long channelId) {
         log.info("REST request to administratively delete channel ID: {}", channelId);
@@ -125,7 +125,7 @@ public class ChannelController {
         }
     }
 
-    // Data Transfer Object (DTO) container to securely map JSON payload parameters
+    // Request body for channel creation.
     @Data
     public static class ChannelCreationRequest {
         @NotBlank

@@ -54,7 +54,7 @@ public class ChatMessage {
     private String attachmentType;
 
     // Holds the temporary, live presigned download URL
-    // Mark as @Transient so Hibernate completely ignores it during standard SQL table writes!
+    // Not persisted. KNOWN ISSUE (B1): response-only fields live on the entity; move to a response DTO.
     @Transient
     private String attachmentUrl;
 
